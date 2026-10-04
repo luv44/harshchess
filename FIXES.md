@@ -97,3 +97,62 @@ Oct-2 checkpoint (`Chessworkermind_Latest_Checkpoint.zip`):
   - Watch mode plays both sides; undo restores your own turn; hints 1–3 reveal
     with suggested squares; no horizontal overflow at 390 px; **zero console
     errors** in all runs.
+
+---
+
+# Fix report 2 — 2026-10-04 (Learn / Brain / hints / Home)
+
+> "learn tab and brain tab is not working… after hint 3 it displays position but it's not visible that much… make ui home page more better"
+
+(The attached screenshot did not reach the sandbox, so every issue below was
+reproduced live in headless Chromium and verified the same way.)
+
+## What was actually broken
+
+1. **Learn "Practice" looked dead.** Clicking any Practice button opened the
+   exercise 1 700+ px below the fold — nothing scrolled, so the board (and the
+   move feedback after it) was invisible. The pieces were playable all along;
+   they were just never on screen.
+2. **Hint 3 was nearly invisible.** The suggested from/to squares used a thin
+   2.5 px brass inset with a ~10 % background wash — easy to miss. The Learn
+   exercise board never received suggested squares at all (text-only hint).
+3. **Brain tab buttons went nowhere useful.** "Practise hanging" / "Start a
+   practice" only switched to the Learn tab — no exercise opened, no scroll.
+4. Minor: duplicate React key warning in the candidate list when you play the
+   best move (best == played).
+
+## Fixes
+
+- **Learn tab**
+  - Opening a practice now scrolls the card into view (`scroll-margin-top`,
+    smooth scroll) — the board is on screen the moment you click Practice.
+  - After every move, a colour-coded **verdict banner** appears directly under
+    the board (green "✓ Correct!" / red "✗ Not quite — best was Nxe5") and
+    scrolls into view; "Reset position" also clears the previous verdict.
+  - Hint 3 now highlights the move's from → to squares on the board itself.
+  - Fixed the duplicate-key warning (`uci + index` composite key).
+- **Brain tab**
+  - "Practise {skill}" and "Start a practice" deep-link into Learn: the right
+    exercise opens immediately and scrolls into view
+    (skill → motif mapping, e.g. `checks → check`).
+- **Hint suggestion visibility (Play + Learn)**
+  - Suggested move is now an unmissable gold treatment: 55 % amber wash on the
+    destination, thick glowing ring (`inset 5px #FFB020` + outer glow), a
+    dashed white inner border, and a gentle `suggestPulse` animation.
+    The legend swatch matches, and hint 3's text says "follow the gold squares".
+- **Home page**
+  - Split hero: headline + primary CTA + live stats chips (moves saved, reviews
+    due, languages, price) on the left; a decorative wooden **mini chessboard**
+    (real FEN, same piece family) on the right, with soft page background washes.
+  - Quick-action cards (Guided game / Play the computer / Learn a skill) are now
+    real hover-lifting action cards with explicit "→" affordances.
+
+## Verification
+
+- `vitest` 131/131, `tsc` clean, production build clean.
+- Headless Chromium on dev + production builds: Practice click scrolls board
+  into view (boardTop 231 px), wrong move → red verdict visible, correct move →
+  green verdict, hint 3 shows pulsing gold f3→e5 (Play e2→e4), Brain
+  "Practise hanging" opens `ex-hanging-1` scrolled into view, home hero board
+  renders 64 squares / 32 pieces, no horizontal overflow at 390 px, and the
+  computer opponent still replies in ~0.9 s — all with zero console errors.

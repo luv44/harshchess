@@ -220,7 +220,7 @@ export default function ChessBoard({ fen, orientation, lastMove, getLegalTargets
             <span><i className="board-legend__swatch" style={{ background: "rgba(43,27,14,.72)", borderRadius: 999 }} /> Legal move · <i className="board-legend__swatch" style={{ borderColor: "#9B2C2C", background: "transparent", borderWidth: 2 }} /> Capture</span>
             <span><i className="board-legend__swatch" style={{ background: "#FFF3D6", borderColor: "#E8D0A0" }} /> Opponent’s last move</span>
             <span><i className="board-legend__swatch" style={{ background: "#FCE8E8", borderColor: "#E8B8B8" }} /> King in check</span>
-            <span><i className="board-legend__swatch" style={{ borderColor: "#B0894A", borderStyle: "dashed" }} /> Suggested move</span>
+            <span><i className="board-legend__swatch" style={{ background: "#FFC107", borderColor: "#B0894A", borderWidth: 2 }} /> Suggested move (gold pulse)</span>
           </div>
         </details>
       )}

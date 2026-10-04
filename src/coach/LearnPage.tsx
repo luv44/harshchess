@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import ChessBoard from "../chess/ChessBoard";
 import { buildFactPacket } from "./factPacket";
@@ -33,22 +33,42 @@ function hasTrustedTranslation(tag: string): boolean {
   return ["en", "es-MX", "hi", "ar", "zh-Hant", "ja", "sw", "fr"].includes(tag);
 }
 
+/** Map a Brain skill id to an exercise motif so "Practise hanging" opens the
+ *  right kind of exercise (the pools use slightly different vocabularies). */
+const MOTIF_FOR_SKILL: Record<string, string> = {
+  hanging: "hanging",
+  checks: "check",
+  captures: "captures",
+  kingSafety: "kingSafety",
+  opening: "opening",
+  endgame: "endgame",
+  calculation: "calculation",
+  recognition: "hanging",
+};
+
 export function LearnPage({
   tag,
   setTag,
   level,
   setLevel,
+  startRequest,
+  onStartRequestConsumed,
 }: {
   tag: string;
   setTag: (t: string) => void;
   level: LangLevel;
   setLevel: (l: LangLevel) => void;
+  /** Set by Brain/Home to open a specific practice immediately. */
+  startRequest?: { skillId?: string; motif?: string } | null;
+  onStartRequestConsumed?: () => void;
 }) {
   const [learner, setLearner] = useState(() => loadLearner());
   const [reviews, setReviews] = useState<ReviewItem[]>(() => loadReviews());
   const [exerciseId, setExerciseId] = useState<string | null>(null);
   const [hintStep, setHintStep] = useState(0);
-  const [lastPacketInfo, setLastPacketInfo] = useState<null | { fen: string; playedUci: string; packet: ReturnType<typeof buildFactPacket>; diagnosis: ReturnType<typeof diagnose> }>(null);
+  const [lastPacketInfo, setLastPacketInfo] = useState<null | { fen: string; playedUci: string; correct: boolean; bestSan: string | null; packet: ReturnType<typeof buildFactPacket>; diagnosis: ReturnType<typeof diagnose> }>(null);
+  const practiceRef = useRef<HTMLDivElement | null>(null);
+  const verdictRef = useRef<HTMLDivElement | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [dailyProgress, setDailyProgress] = useState({ reviewsDone: 0, lessonsDone: 0 });
 
@@ -115,6 +135,35 @@ export function LearnPage({
     setHintStep(0);
     setLastPacketInfo(null);
   }, []);
+
+  /** Brain/Home "Practise X" — open the matching exercise right away. */
+  useEffect(() => {
+    if (!startRequest) return;
+    const motif = startRequest.motif ?? MOTIF_FOR_SKILL[startRequest.skillId ?? ""] ?? "hanging";
+    const ex = EXERCISES.find((e) => e.motif === motif) ?? EXERCISES[0];
+    startExercise(ex.id);
+    onStartRequestConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startRequest]);
+
+  /** Whenever a practice opens, bring it into view — otherwise the board sits
+   *  far below the fold and looks like the click "did nothing". */
+  useEffect(() => {
+    if (!exerciseId) return;
+    const t = window.setTimeout(() => {
+      practiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [exerciseId]);
+
+  /** After each move, make sure the verdict is on screen (the board is tall). */
+  useEffect(() => {
+    if (!lastPacketInfo) return;
+    const t = window.setTimeout(() => {
+      verdictRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [lastPacketInfo]);
 
   const exerciseBoard = useMemo(() => {
     if (!exercise) return null;
@@ -185,8 +234,6 @@ export function LearnPage({
         recentMotifs: [],
         recentPackets: [],
       });
-      setLastPacketInfo({ fen: beforeFen, playedUci, packet, diagnosis: diag });
-
       // learner update — map motif to skill
       const motifSkill: Record<string, SkillId> = {
         hanging: "hanging",
@@ -201,6 +248,7 @@ export function LearnPage({
       const skillId: SkillId = motifSkill[exercise.motif] ?? "recognition";
       const correct = playedUci.slice(0, 4) === bestUci.slice(0, 4);
       const hinted = hintStep > 0;
+      setLastPacketInfo({ fen: beforeFen, playedUci, correct, bestSan: candidates[0]?.san ?? null, packet, diagnosis: diag });
       const nextLearner = recordAttempt(learner, {
         skillId,
         at: new Date().toISOString(),
@@ -361,7 +409,7 @@ export function LearnPage({
       </div>
 
       {exercise && exFen && (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card practice-card" ref={practiceRef} style={{ marginTop: 16, scrollMarginTop: 84 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3>Practice — {exercise.motif} · {exercise.id}</h3>
             <button className="btn btn--ghost" onClick={() => { setExerciseId(null); setExFen(null); setHintStep(0); }}>Close</button>
@@ -369,19 +417,33 @@ export function LearnPage({
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Play the best move on the board. Hints are stepwise; later the same idea is retested in a different position to measure transfer.</p>
 
           <div style={{ maxWidth: 420, margin: "12px auto" }}>
-            <ExerciseBoard fen={exFen} onMove={onExerciseMove} />
+            <ExerciseBoard
+              fen={exFen}
+              onMove={onExerciseMove}
+              suggestFrom={hintStep >= 3 && !lastPacketInfo ? (BEST_BY_ID[exercise.id] ?? "").slice(0, 2) || null : null}
+              suggestTo={hintStep >= 3 && !lastPacketInfo ? (BEST_BY_ID[exercise.id] ?? "").slice(2, 4) || null : null}
+            />
           </div>
 
+          {/* Compact verdict — visible immediately under the board */}
+          {lastPacketInfo?.packet && (
+            <div ref={verdictRef} className={`practice-verdict ${lastPacketInfo.correct ? "practice-verdict--ok" : "practice-verdict--bad"}`} role="status">
+              {lastPacketInfo.correct
+                ? <><strong>✓ Correct!</strong> {lastPacketInfo.packet.played.san} was the best move in this position.</>
+                : <><strong>✗ Not quite.</strong> You played {lastPacketInfo.packet.played.san} — the best move here was <strong>{lastPacketInfo.bestSan ?? BEST_BY_ID[exercise.id]}</strong>. Read why below, then press “Reset position” and try again.</>}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            <button className="btn" onClick={() => setHintStep((s) => Math.min(3, s + 1))}>{t(tag, "hintStep")} {hintStep + 1}/3</button>
+            <button className="btn" onClick={() => setHintStep((s) => Math.min(3, s + 1))}>{t(tag, "hintStep")} {Math.min(hintStep + 1, 3)}/3</button>
             <button className="btn btn--ghost" onClick={() => setHintStep(0)}>Reset hints</button>
-            <button className="btn btn--ghost" onClick={() => setExFen(exercise.fen)}>Reset position</button>
+            <button className="btn btn--ghost" onClick={() => { setExFen(exercise.fen); setLastPacketInfo(null); }}>Reset position</button>
             <span className="pill pill--off" style={{ fontSize: "0.78rem" }}>FEN: {exFen.slice(0, 42)}…</span>
           </div>
 
           {hintStep >= 1 && <p className="engine-panel__hint">Hint 1 — {rendered?.what ?? `${t(tag, "factWhat")}: look for ${exercise.motif}.`}</p>}
           {hintStep >= 2 && <p className="engine-panel__hint">Hint 2 — {rendered?.why ?? t(tag, "factWhy")}</p>}
-          {hintStep >= 3 && <p className="engine-panel__hint">Hint 3 — Next: {rendered?.next ?? BEST_BY_ID[exercise.id]}</p>}
+          {hintStep >= 3 && <p className="engine-panel__hint"><strong>Hint 3 — Play the highlighted move:</strong> {rendered?.next ?? BEST_BY_ID[exercise.id]} <span style={{ color: "var(--muted)" }}>(the gold squares on the board above show from → to)</span></p>}
 
           {lastPacketInfo?.packet && (
             <div className="engine-panel" style={{ marginTop: 12 }}>
@@ -406,8 +468,8 @@ export function LearnPage({
                 <details>
                   <summary style={{ cursor: "pointer", color: "var(--text-muted)" }}>Show candidates (verified, no invented scores)</summary>
                   <ul style={{ marginTop: 8, paddingLeft: 18, color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                    {lastPacketInfo.packet.candidates.map((c) => (
-                      <li key={c.uci}>{c.san ?? c.uci} ({c.uci}) {typeof c.scoreCp === "number" ? `${(c.scoreCp/100).toFixed(2)}` : typeof c.scoreMate === "number" ? `#${c.scoreMate}` : ""} — PV: {c.pvSans.join(" ")}</li>
+                    {lastPacketInfo.packet.candidates.map((c, idx) => (
+                      <li key={`${c.uci}-${idx}`}>{c.san ?? c.uci} ({c.uci}) {typeof c.scoreCp === "number" ? `${(c.scoreCp/100).toFixed(2)}` : typeof c.scoreMate === "number" ? `#${c.scoreMate}` : ""} — PV: {c.pvSans.join(" ")}</li>
                     ))}
                   </ul>
                 </details>
@@ -433,7 +495,7 @@ export function LearnPage({
   );
 }
 
-function ExerciseBoard({ fen, onMove }: { fen: string; onMove: (from: Square, to: Square, promo?: "q"|"r"|"b"|"n") => boolean }) {
+function ExerciseBoard({ fen, onMove, suggestFrom, suggestTo }: { fen: string; onMove: (from: Square, to: Square, promo?: "q"|"r"|"b"|"n") => boolean; suggestFrom?: string | null; suggestTo?: string | null }) {
   const c = useMemo(() => {
     try { return new Chess(fen); } catch { return new Chess(); }
   }, [fen]);
@@ -457,5 +519,5 @@ function ExerciseBoard({ fen, onMove }: { fen: string; onMove: (from: Square, to
     return last ? { from: last.from, to: last.to } : null;
   }, [c]);
 
-  return <ChessBoard fen={fen} orientation="w" lastMove={lastMove} getLegalTargets={getLegalTargets} isPromotionMove={isPromotionMove} tryMove={onMove} />;
+  return <ChessBoard fen={fen} orientation="w" lastMove={lastMove} getLegalTargets={getLegalTargets} isPromotionMove={isPromotionMove} tryMove={onMove} suggestFrom={suggestFrom ?? null} suggestTo={suggestTo ?? null} />;
 }

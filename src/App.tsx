@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import ChessBoard from "./chess/ChessBoard";
+import { PieceSvg } from "./chess/pieces";
 import { useChessGame } from "./chess/useChessGame";
 import { useComputerOpponent } from "./chess/useComputerOpponent";
 import { useEngine } from "./engine/useEngine";
@@ -43,6 +44,12 @@ function useHomeAction(): { label: string; to: Tab; detail: string } {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
+  /** Deep-link into a Learn practice, e.g. from Brain's "Practise hanging". */
+  const [learnRequest, setLearnRequest] = useState<{ skillId?: string; motif?: string } | null>(null);
+  const startPractice = useCallback((req: { skillId?: string; motif?: string }) => {
+    setLearnRequest(req);
+    setTab("learn");
+  }, []);
   const game = useChessGame();
   const { tag, setTag, level, setLevel } = useLanguage();
   const online = useOnline();
@@ -109,8 +116,8 @@ export default function App() {
         {tab === "home" && <HomePage onGo={setTab} game={game} homeAction={homeAction} canInstall={canInstall} onInstall={doInstall} tag={tag} />}
         {tab === "play" && <PlayPage game={game} onGo={setTab} />}
         {tab === "games" && <GamesPage game={game} onGo={setTab} />}
-        {tab === "learn" && <LearnPage tag={tag} setTag={setTag} level={level} setLevel={setLevel} />}
-        {tab === "brain" && <BrainPage onGo={setTab} tag={tag} />}
+        {tab === "learn" && <LearnPage tag={tag} setTag={setTag} level={level} setLevel={setLevel} startRequest={learnRequest} onStartRequestConsumed={() => setLearnRequest(null)} />}
+        {tab === "brain" && <BrainPage onGo={setTab} onPractise={startPractice} tag={tag} />}
         {tab === "account" && <AccountPage />}
         {tab === "status" && <StatusPage tag={tag} canInstall={canInstall} onInstall={doInstall} />}
       </main>
@@ -133,36 +140,50 @@ export default function App() {
 
 function HomePage({ onGo, game, homeAction, canInstall, onInstall, tag: _tag }: { onGo: (t: Tab) => void; game: ReturnType<typeof useChessGame>; homeAction: { label: string; to: Tab; detail: string }; canInstall: boolean; onInstall: () => void; tag: string }) {
   const moves = game.historySan.length;
+  const reviewsDue = (() => { try { return loadReviews().filter((r) => isReviewDue(r, new Date().toISOString())).length; } catch { return 0; } })();
   void _tag;
   return (
     <>
       <section className="hero">
-        <div className="badge">Welcome to your study room</div>
-        <h1>Learn how to think, not just what move to play.</h1>
-        <p>One link on desktop and phone. Your board, your coaching, your pace — no install and no paywall on moves. Today you can finish a short session in under 10 minutes.</p>
-
-        <div className="card card--raised" style={{ padding: 16, display: "grid", gap: 10 }}>
-          <div className="pill pill--brass" style={{ width: "fit-content" }}>Today</div>
-          <h2 style={{ fontSize: "1.25rem" }}>{homeAction.label}</h2>
-          <p style={{ marginTop: -2 }}>{homeAction.detail} {moves > 0 && <>You have {moves} move{moves!==1?"s":""} saved — resume or start fresh.</>}</p>
-          <div className="hero__cta" style={{ justifyContent: "flex-start", marginTop: 4 }}>
-            <button className="btn btn--primary" onClick={() => onGo(homeAction.to)}>{homeAction.label} →</button>
-            <button className="btn btn--ghost" onClick={() => onGo("play")}>Open free board</button>
+        <div className="hero__top">
+          <div style={{ display: "grid", gap: 14 }}>
+            <div className="badge">Welcome to your study room</div>
+            <h1>Learn how to think, not just what move to play.</h1>
+            <p>One link on desktop and phone. Your board, your coaching, your pace — no install and no paywall on moves. A short session fits in under 10 minutes.</p>
+            <div className="hero__cta">
+              <button className="btn btn--primary" onClick={() => onGo(homeAction.to)}>{homeAction.label} →</button>
+              <button className="btn btn--ghost" onClick={() => onGo("play")}>Open free board</button>
+            </div>
+            <div className="hero__stats" aria-label="Your progress at a glance">
+              <span className="hero__stat"><b>{moves}</b> move{moves !== 1 ? "s" : ""} saved</span>
+              <span className="hero__stat"><b>{reviewsDue}</b> review{reviewsDue !== 1 ? "s" : ""} due</span>
+              <span className="hero__stat"><b>8</b> languages</span>
+              <span className="hero__stat"><b>₹0</b> to play</span>
+            </div>
+          </div>
+          <div>
+            <div className="hero__board" aria-hidden="true">
+              <HeroBoard fen="r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3" />
+            </div>
+            <p className="hero__board-caption">Every move checked by chess.js · coaching verified by Stockfish</p>
           </div>
         </div>
 
         <div className="grid3">
-          <button className="card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => onGo("play")}>
+          <button className="card card--action" onClick={() => onGo("play")}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon d={Paths.board} size={18} /><strong>Guided game</strong></div>
             <p style={{ marginTop: 6 }}>Board first — turn, what changed, one thing to notice, then you play.</p>
+            <span className="card--action__go">Open board →</span>
           </button>
-          <button className="card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => onGo("play")}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon d={Paths.play} size={18} /><strong>Free play</strong></div>
-            <p style={{ marginTop: 6 }}>Computer or two-player local. Adjustable when you want it.</p>
+          <button className="card card--action" onClick={() => onGo("play")}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon d={Paths.play} size={18} /><strong>Play the computer</strong></div>
+            <p style={{ marginTop: 6 }}>Stockfish 1–10 strengths, or two-player local. It replies in under a second.</p>
+            <span className="card--action__go">Challenge it →</span>
           </button>
-          <button className="card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => onGo("games")}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon d={Paths.games} size={18} /><strong>Saved game</strong></div>
-            <p style={{ marginTop: 6 }}>{moves > 0 ? `${moves} moves · ${game.pgn ? game.pgn.split(" ").slice(0,4).join(" ") : "saved position"}` : "No saved game yet — play a few moves."}</p>
+          <button className="card card--action" onClick={() => onGo("learn")}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon d={Paths.book} size={18} /><strong>Learn a skill</strong></div>
+            <p style={{ marginTop: 6 }}>Short practices with stepwise hints — hanging pieces, checks, calculation.</p>
+            <span className="card--action__go">Pick a practice →</span>
           </button>
         </div>
 
@@ -252,6 +273,32 @@ function HomePage({ onGo, game, homeAction, canInstall, onInstall, tag: _tag }: 
   );
 }
 
+/** Decorative static board for the home hero — no interaction, pure flavour. */
+function HeroBoard({ fen }: { fen: string }) {
+  const board: Array<Array<{ color: "w" | "b"; type: "k" | "q" | "r" | "b" | "n" | "p" } | null>> = [];
+  for (const row of fen.split(" ")[0].split("/")) {
+    const cells: Array<{ color: "w" | "b"; type: "k" | "q" | "r" | "b" | "n" | "p" } | null> = [];
+    for (const ch of row) {
+      if (ch >= "1" && ch <= "8") { for (let i = 0; i < Number(ch); i++) cells.push(null); }
+      else cells.push({ color: ch === ch.toUpperCase() ? "w" : "b", type: ch.toLowerCase() as "k" | "q" | "r" | "b" | "n" | "p" });
+    }
+    board.push(cells);
+  }
+  return (
+    <>
+      {board.map((cells, r) => (
+        <div className="hero__board-row" key={r}>
+          {cells.map((piece, c) => (
+            <span key={c} className={`hero__board-sq ${(r + c) % 2 === 0 ? "hero__board-sq--light" : "hero__board-sq--dark"}`}>
+              {piece && <PieceSvg color={piece.color} type={piece.type} />}
+            </span>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
 function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo: (t: Tab) => void }) {
   const statusBanner = getStatusText(game.status);
   const [copied, setCopied] = useState<string | null>(null);
@@ -327,7 +374,7 @@ function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo:
     const best = liveAnalysis?.candidates[0];
     if (n === 1) return `Look at the ${best ? `square ${best.uci.slice(2, 4)}` : "centre — which piece is under pressure?"}`;
     if (n === 2) return best ? `Consider ${best.san ?? best.uci} — ${pieceNameFromSan(best.san ?? best.uci)}.` : "Consider which piece can develop with a threat.";
-    if (n === 3) return best ? `Try ${best.san ?? best.uci} (${best.uci}) — ${scoreLabel(best)}.` : "No verified line at this depth — try any legal developing move.";
+    if (n === 3) return best ? `Try ${best.san ?? best.uci} — follow the gold squares on the board (from → to). ${scoreLabel(best)}.` : "No verified line at this depth — try any legal developing move.";
     return "";
   };
 
@@ -723,7 +770,7 @@ function MiniBoardRow() {
   );
 }
 
-function BrainPage({ onGo, tag: _tag }: { onGo: (t: Tab) => void; tag: string }) {
+function BrainPage({ onGo, onPractise, tag: _tag }: { onGo: (t: Tab) => void; onPractise: (req: { skillId?: string; motif?: string }) => void; tag: string }) {
   void _tag;
   const reviews = (() => { try { return loadReviews(); } catch { return []; } })();
   if (reviews.length === 0) {
@@ -734,7 +781,7 @@ function BrainPage({ onGo, tag: _tag }: { onGo: (t: Tab) => void; tag: string })
           <div style={{ width: 56, height: 56, borderRadius: 999, background: "var(--brass-soft)", border: "1px solid #E8D9BE", display: "grid", placeItems: "center" }}><Icon d={Paths.brain} size={24} /></div>
           <h3>Your journey is beginning</h3>
           <p>Play a few exercises — Brain will show what to practise next from real, verified evidence. No invented rating yet.</p>
-          <button className="btn btn--primary" onClick={() => onGo("learn")}>Start a practice</button>
+          <button className="btn btn--primary" onClick={() => onPractise({ motif: "hanging" })}>Start a practice</button>
         </div>
       </section>
     );
@@ -751,7 +798,7 @@ function BrainPage({ onGo, tag: _tag }: { onGo: (t: Tab) => void; tag: string })
           <div className="pill pill--warn" style={{ width: "fit-content" }}>Up next</div>
           <h3 style={{ marginTop: 8 }}>Refresh: {due[0].skillId}</h3>
           <p style={{ marginTop: 6, fontSize: ".9rem" }}>Recall is below your threshold — a short review is the best next step. Evidence: last review interval {due[0].intervalDays}d.</p>
-          <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={() => onGo("learn")}>Practise {due[0].skillId}</button>
+          <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={() => onPractise({ skillId: due[0].skillId })}>Practise {due[0].skillId}</button>
         </div>
       ) : (
         <div className="card" style={{ marginTop: 14 }}>
