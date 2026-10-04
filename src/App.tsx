@@ -12,6 +12,8 @@ import { t } from "./i18n/strings";
 import { Icon, Paths } from "./icons";
 import { loadReviews, loadLearner } from "./coach/learnerStorage";
 import { LESSONS, loadLessonDone, isLessonDone, nextLesson } from "./coach/lessons";
+import { loadPractice, getLevel } from "./coach/adaptive";
+import { MOTIF_LABEL, type Motif } from "./coach/practiceBank";
 import { isDue as isReviewDue } from "./coach/spaced";
 import { loadSession } from "./chess/session";
 
@@ -138,7 +140,7 @@ export default function App() {
             <span style={{ marginLeft: 6 }}>No ads — AdSense optional future phase only.</span>
           </p>
           <p style={{ marginTop: 8, fontSize: ".78rem", opacity: .7 }}>PWA: manifest + icons + sw.js · offline shell cached; login/purchase/sync need network · Safari iPhone: Share → Add to Home Screen</p>
-          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-6</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
+          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-7</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
         </div>
       </footer>
     </>
@@ -781,6 +783,16 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
   );
 }
 
+const MOTIF_FOR_SKILL_BRAIN: Record<string, string> = {
+  opening: "opening",
+  hanging: "hanging",
+  checks: "mate",
+  kingSafety: "mate",
+  captures: "captures",
+  endgame: "endgame",
+  calculation: "calculation",
+};
+
 const FRIENDLY: Record<string, string> = {
   recognition: "Board vision",
   calculation: "Calculation",
@@ -793,6 +805,7 @@ const FRIENDLY: Record<string, string> = {
 };
 
 function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (req: { lessonId?: string; skillId?: string; motif?: string }) => void }) {
+  const practice = loadPractice();
   const reviews = (() => { try { return loadReviews(); } catch { return []; } })();
   const done = loadLessonDone();
   const learner = loadLearner();
@@ -818,6 +831,17 @@ function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (
     <section className="section">
       <h2>Brain — your chess coach</h2>
       <p style={{ color: "var(--muted)", marginTop: 6 }}>What to practise next, based only on what you have actually done. No invented ratings.</p>
+
+      {/* Smart practice — adaptive, always available */}
+      <div className="card card--raised" style={{ marginTop: 14, borderColor: "#E8D9BE" }}>
+        <div className="pill pill--brass" style={{ width: "fit-content" }}>Smart practice</div>
+        <h3 style={{ marginTop: 8 }}>5 positions, picked for you right now</h3>
+        <p style={{ marginTop: 6, fontSize: ".92rem" }}>
+          It starts at your level, steps <b>up</b> when you solve cleanly, eases <b>off</b> when you miss —
+          and every position has hint <b>steps</b> that walk you to the answer instead of telling you.
+        </p>
+        <button className="btn btn--primary" style={{ marginTop: 10 }} onClick={() => onPractise({ motif: "mixed" })}>Start smart practice →</button>
+      </div>
 
       {/* Recommendation */}
       <div className="card card--raised" style={{ marginTop: 14 }}>
@@ -875,7 +899,10 @@ function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (
               <div key={sid} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: "10px 12px", background: skillDue ? "var(--warn-soft)" : "var(--surface-raised)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <strong style={{ fontSize: ".9rem" }}>{FRIENDLY[sid] ?? sid}</strong>
-                  <span style={{ fontSize: ".8rem", color: "var(--muted)" }}>{attempts === 0 ? "not practised yet" : `${attempts} attempt${attempts !== 1 ? "s" : ""}`}</span>
+                  <span style={{ fontSize: ".8rem", color: "var(--muted)", display: "inline-flex", gap: 6, alignItems: "center" }}>
+                    {(() => { const m = (MOTIF_FOR_SKILL_BRAIN[sid] ?? "hanging") as Motif; const lv = getLevel(practice, m); return <span className="pill" style={{ fontSize: ".68rem" }}>Level {lv} · {MOTIF_LABEL[m]}</span>; })()}
+                    {attempts === 0 ? "not practised yet" : `${attempts} attempt${attempts !== 1 ? "s" : ""}`}
+                  </span>
                 </div>
                 <div className="skill-bar" style={{ marginTop: 8 }}>
                   <div className="skill-bar__fill" style={{ width: `${attempts === 0 ? 0 : Math.max(6, pct)}%` }} />

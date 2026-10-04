@@ -4,12 +4,12 @@ import ChessBoard from "../chess/ChessBoard";
 import { recordAttempt, type SkillId, type Learner } from "./learnerModel";
 import { loadLearner, saveLearner, loadReviews, saveReviews } from "./learnerStorage";
 import { isDue, scheduleAfterAttempt, createReviewItem, type ReviewItem } from "./spaced";
-import { EXERCISES, DAILY_BOSS } from "./exercises";
-import type { Exercise } from "./ranking";
+import PracticeSession from "./PracticeSession";
+import { PRACTICE_BANK, MOTIF_LABEL, type Motif } from "./practiceBank";
+import { loadPractice, getLevel } from "./adaptive";
 import { LanguagePicker } from "../i18n/LanguagePicker";
 import {
   LESSONS,
-  PUZZLE_INFO,
   loadLessonDone,
   saveLessonDone,
   isLessonDone,
@@ -42,15 +42,18 @@ const SKILL_FOR_MOTIF: Record<string, SkillId> = {
   tactic: "calculation",
 };
 
-const MOTIF_FOR_SKILL: Record<string, string> = {
+const MOTIF_FOR_SKILL: Record<string, Motif | "mixed"> = {
   hanging: "hanging",
-  checks: "check",
+  checks: "mate",
   captures: "captures",
-  kingSafety: "kingSafety",
+  kingSafety: "mate",
   opening: "opening",
   endgame: "endgame",
   calculation: "calculation",
   recognition: "hanging",
+  moveChoice: "calculation",
+  transfer: "hanging",
+  execution: "captures",
 };
 
 const FRIENDLY_SKILL: Record<string, string> = {
@@ -86,10 +89,8 @@ export function LearnPage({
   const [lessonFeedback, setLessonFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [lessonHint, setLessonHint] = useState(false);
 
-  const [puzzle, setPuzzle] = useState<Exercise | null>(null);
-  const [puzzleFen, setPuzzleFen] = useState<string | null>(null);
-  const [puzzleFeedback, setPuzzleFeedback] = useState<{ ok: boolean; text: string } | null>(null);
-  const [puzzleHint, setPuzzleHint] = useState(false);
+  const [sessionMotif, setSessionMotif] = useState<Motif | "mixed" | null>(null);
+  const [practiceStore, setPracticeStore] = useState(() => loadPractice());
 
   const playerRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,17 +114,12 @@ export function LearnPage({
     setLessonBoardFen(l.steps[0]?.fen ?? l.drill?.fen ?? null);
     setLessonFeedback(null);
     setLessonHint(false);
-    setPuzzle(null);
+    setSessionMotif(null);
     scrollToPlayer();
   }, [scrollToPlayer]);
 
-  const openPuzzle = useCallback((id: string) => {
-    const p = EXERCISES.find((e) => e.id === id) ?? (id === DAILY_BOSS.id ? DAILY_BOSS : null);
-    if (!p) return;
-    setPuzzle(p);
-    setPuzzleFen(p.fen);
-    setPuzzleFeedback(null);
-    setPuzzleHint(false);
+  const openSession = useCallback((m: Motif | "mixed") => {
+    setSessionMotif(m);
     setLessonId(null);
     scrollToPlayer();
   }, [scrollToPlayer]);
@@ -134,11 +130,7 @@ export function LearnPage({
     if (startRequest.lessonId) openLesson(startRequest.lessonId);
     else if (startRequest.skillId || startRequest.motif) {
       const motif = startRequest.motif ?? MOTIF_FOR_SKILL[startRequest.skillId ?? ""] ?? "hanging";
-      const drillLesson = LESSONS.find((l) => l.drill && SKILL_FOR_LESSON[l.id] === (startRequest.skillId as SkillId | undefined));
-      const puzzleEx = EXERCISES.find((e) => e.motif === motif);
-      if (drillLesson && !isLessonDone(done, drillLesson.id)) openLesson(drillLesson.id);
-      else if (puzzleEx) openPuzzle(puzzleEx.id);
-      else openLesson(nextLesson(done).id);
+      openSession((motif === "mixed" ? "mixed" : motif) as Motif | "mixed");
     }
     onStartRequestConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,32 +169,6 @@ export function LearnPage({
       return true;
     },
     [lesson, lessonBoardFen, lessonHint, recordOutcome]
-  );
-
-  /* ------------------------- puzzle move ------------------------- */
-
-  const onPuzzleMove = useCallback(
-    (from: Square, to: Square, promo?: "q" | "r" | "b" | "n") => {
-      if (!puzzle || !puzzleFen) return false;
-      const info = PUZZLE_INFO[puzzle.id];
-      const best = BEST_FOR_PUZZLE[puzzle.id] ?? "";
-      const c = new Chess(puzzleFen);
-      const legal = c.moves({ verbose: true, square: from }).some((m) => m.to === to);
-      if (!legal) return false;
-      const played = `${from}${to}${promo ?? ""}`;
-      const correct = !!best && played.slice(0, 4) === best.slice(0, 4) && (best.length === 4 || played === best);
-      if (!correct) {
-        setPuzzleFeedback({ ok: false, text: "That move doesn't achieve the goal — try again." });
-        return false;
-      }
-      const res = c.move({ from, to, promotion: promo });
-      if (!res) return false;
-      setPuzzleFen(c.fen());
-      setPuzzleFeedback({ ok: true, text: info?.why ?? "Solved!" });
-      recordOutcome(SKILL_FOR_MOTIF[puzzle.motif] ?? "recognition", true, puzzleHint, puzzle.difficulty);
-      return true;
-    },
-    [puzzle, puzzleFen, puzzleHint, recordOutcome]
   );
 
   /* ------------------------- shared board helpers ------------------------- */
@@ -387,70 +353,39 @@ export function LearnPage({
         </div>
       )}
 
-      {/* Puzzle player */}
-      {puzzle && puzzleFen && (
-        <div className="card practice-card" ref={playerRef} style={{ marginBottom: 16, scrollMarginTop: 84 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            <h3>Puzzle — {puzzle.motif}</h3>
-            <button className="btn btn--ghost btn--sm" onClick={() => { setPuzzle(null); setPuzzleFen(null); }}>Close</button>
-          </div>
-          <div className="drill__goal" style={{ marginTop: 8 }}>
-            <span className="pill pill--brass">Your turn</span>
-            <strong>{PUZZLE_INFO[puzzle.id]?.goal ?? "Play the best move."}</strong>
-          </div>
-          <div style={{ maxWidth: 380, margin: "10px auto" }}>
-            <ChessBoard
-              fen={puzzleFen}
-              orientation="w"
-              lastMove={null}
-              getLegalTargets={getLegalTargets(puzzleFen)}
-              isPromotionMove={isPromotionMove(puzzleFen)}
-              tryMove={onPuzzleMove}
-              hintText="You play White — tap one of your pieces, then a highlighted square."
-            />
-          </div>
-          {puzzleFeedback && (
-            <div className={`practice-verdict ${puzzleFeedback.ok ? "practice-verdict--ok" : "practice-verdict--bad"}`} role="status">
-              {puzzleFeedback.ok ? <><strong>✓ Solved!</strong> {puzzleFeedback.text}</> : <><strong>✗ Try again.</strong> {puzzleFeedback.text}</>}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {!puzzleFeedback?.ok && <button className="btn btn--quiet btn--sm" onClick={() => setPuzzleHint(true)}>Show hint</button>}
-            {puzzleHint && !puzzleFeedback?.ok && <span className="pill" style={{ alignSelf: "center" }}>{HINT_FOR_PUZZLE[puzzle.id] ?? "Look for an undefended piece near the enemy king."}</span>}
-            <button className="btn btn--ghost btn--sm" onClick={() => { setPuzzleFen(puzzle.fen); setPuzzleFeedback(null); setPuzzleHint(false); }}>Reset position</button>
-            {puzzleFeedback?.ok && (
-              <button
-                className="btn btn--primary btn--sm"
-                onClick={() => {
-                  const others = EXERCISES.filter((e) => e.id !== puzzle.id);
-                  const nextP = others[Math.floor(Math.random() * others.length)];
-                  if (nextP) openPuzzle(nextP.id);
-                }}
-              >Another puzzle →</button>
-            )}
-          </div>
-        </div>
+      {/* Adaptive practice session */}
+      {sessionMotif && (
+        <PracticeSession
+          key={sessionMotif + "-" + practiceStore.sessions}
+          motif={sessionMotif}
+          onExit={() => { setSessionMotif(null); setPracticeStore(loadPractice()); }}
+        />
       )}
 
-      {/* Puzzles */}
+      {/* Smart practice */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Puzzle practice</h3>
+        <h3>Smart practice — it adapts to you</h3>
         <p style={{ color: "var(--muted)", fontSize: "0.86rem", marginTop: 4 }}>
-          One-move puzzles — find the best move. Good for a quick daily brain warm-up.
+          5 positions per session. Two clean solves in a row step the difficulty up; misses step it down.
+          Stuck? Hint <b>steps</b> walk you to the answer — where to look, then what to see.
         </p>
         <div className="puzzle-grid">
-          {EXERCISES.map((ex) => (
-            <button key={ex.id} type="button" className="puzzle-card" onClick={() => openPuzzle(ex.id)}>
-              <strong>{PUZZLE_INFO[ex.id]?.goal?.replace(/\.$/, "") ?? ex.motif}</strong>
-              <span className="puzzle-card__meta">{ex.motif} · {difficultyDots(ex.difficulty)}</span>
-              <span className="puzzle-card__go">Solve →</span>
-            </button>
-          ))}
-          <button type="button" className="puzzle-card puzzle-card--boss" onClick={() => openPuzzle(DAILY_BOSS.id)}>
-            <strong>Daily challenge</strong>
-            <span className="puzzle-card__meta">A fresh boss position</span>
-            <span className="puzzle-card__go">Take it on →</span>
+          <button type="button" className="puzzle-card puzzle-card--boss" onClick={() => openSession("mixed")}>
+            <strong>Smart mix — picked for you</strong>
+            <span className="puzzle-card__meta">All skills · starts easy, follows you</span>
+            <span className="puzzle-card__go">Start session →</span>
           </button>
+          {(["mate", "hanging", "captures", "calculation", "endgame", "opening"] as Motif[]).map((m) => {
+            const lv = getLevel(practiceStore, m);
+            const n = PRACTICE_BANK.filter((b) => b.motif === m).length;
+            return (
+              <button key={m} type="button" className="puzzle-card" onClick={() => openSession(m)}>
+                <strong>{MOTIF_LABEL[m]}</strong>
+                <span className="puzzle-card__meta">Level {lv} of 3 · {n} positions</span>
+                <span className="puzzle-card__go">Practise →</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -463,31 +398,6 @@ export function LearnPage({
     </section>
   );
 }
-
-/** Best move per puzzle (UCI). */
-const BEST_FOR_PUZZLE: Record<string, string> = {
-  "ex-hanging-1": "f3e5",
-  "ex-check-1": "h5f7",
-  "ex-capture-1": "e4d5",
-  "ex-king-1": "e1g1",
-  "ex-opening-1": "e2e4",
-  "ex-endgame-1": "e2e4",
-  "ex-transfer-1": "f3e5",
-  "ex-calc-1": "e4d5",
-  "daily-boss-2026-09-27": "f3e5",
-};
-
-const HINT_FOR_PUZZLE: Record<string, string> = {
-  "ex-hanging-1": "Which black piece is undefended? Your knight on f3 sees it.",
-  "ex-check-1": "Two of your pieces aim at f7 — the weakest square in Black's camp.",
-  "ex-capture-1": "The d5 pawn just walked into your e4 pawn's diagonal.",
-  "ex-king-1": "Your king and rook have never moved — the special move is available.",
-  "ex-opening-1": "Which pawn opening frees two pieces at once?",
-  "ex-endgame-1": "Only one pawn matters — run it.",
-  "ex-transfer-1": "Same idea as before: look for an undefended black piece.",
-  "ex-calc-1": "Count the attackers and defenders in the centre.",
-  "daily-boss-2026-09-27": "The e5 pawn is free for your knight.",
-};
 
 function difficultyDots(d: number): string {
   const n = Math.max(1, Math.min(5, Math.round(d * 5)));

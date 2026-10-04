@@ -620,3 +620,23 @@ h3{ font-size:1.02rem; }
 }
 .review-moves__san:hover { background: var(--surface-2); }
 .review-moves__san--cur { background: var(--brass-soft); border-color: #E8D9BE; font-weight: 700; }
+
+/* ----- Adaptive practice session ----- */
+.session-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.session-dot {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-grid; place-items: center;
+  font-size: .82rem; font-weight: 700;
+  background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.session-dot--ok { background: #E7F4E4; color: #2E7D32; border-color: #BFE3C2; }
+.session-dot--hint { background: #FFF6DE; color: #8A6D1A; border-color: #EAD79E; }
+.session-dot--bad { background: #FDE8E8; color: #B3392F; border-color: #F2C4C0; }
+.session-dot--now { border-color: var(--brass, #B99450); box-shadow: 0 0 0 2px var(--brass-soft, #F0E4CC); }
+.hint-step {
+  display: flex; gap: 8px; align-items: baseline;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 10px; margin-top: 8px;
+  font-size: .9rem; text-align: left;
+}

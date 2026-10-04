@@ -343,3 +343,44 @@ Verified on phone width 390px with a 6-move game (1. e4 e5 2. d4 d5 3. Nf3 Nc6):
 - no layout overflow, zero console errors, 131/131 tests ✓
 
 Footer must now read **App build 2026.10.04-6** (one hard refresh: Ctrl+Shift+R).
+
+---
+
+## Report 8 — Practice rebuilt: adaptive, stepped, never still (App build 2026.10.04-7)
+
+You asked what practice the app gives at this stage, and told me to make it the smartest it can
+be — steps, my design — and "don't make it still". The old practice was static: the same fixed
+puzzles every visit. It is now an **adaptive engine**.
+
+### What practice gives you now
+- **18 verified positions across 6 skills** (checkmate patterns, hanging pieces, winning
+  captures, calculation & forks, endgames, opening principles), each at **Levels 1–3**.
+  Every single position is machine-proved sound by 61 automated tests — mates really mate,
+  material wins really survive recaptures, forks really work against every defence. The old
+  "hanging e5 pawn" puzzle that was actually unsound (a knight was defending it) is gone.
+- **Smart sessions**: 5 positions per run. Solve two cleanly in a row and the engine **steps you
+  UP a level mid-session**; miss two and it **eases OFF**. Finish a session and your level is
+  saved — next time you start where you belong.
+- **Hint STEPS, not spoilers**: each position has a 2-step hint ladder — "where to look", then
+  "what to see". A wrong answer unlocks the next nudge automatically. You can also ask it to
+  show the answer (recorded honestly as a miss, never as success).
+- **Smart mix**: Brain's new one-tap "Start smart practice" builds a 5-position session across
+  your skills, weakest first.
+- **Brain shows your levels**: every skill row now has a chip like "Level 2 · Checkmate
+  patterns", and its Practise → button starts an adaptive session for that skill.
+
+### Verified in a real browser (phone width 390px, real taps)
+| Check | Result |
+|---|---|
+| Session L1→L1→**L2**→**L3** step-up mid-session | ✅ |
+| Wrong move → "✗ + nudge", hint step auto-unlocks, piece not moved | ✅ |
+| 5/5 solved summary → "Stepping you UP to level 2" → saved after reload | ✅ |
+| All-skipped session from Level 3 → "easing back to level 2" → saved | ✅ |
+| Promotion in a session (g7→g8, choose Queen) → ✓ correct, queen appears | ✅ |
+| Can't skip past an unsolved position without recording a miss | ✅ |
+| Brain level chips + Start smart practice → mixed session opens | ✅ |
+| Lessons unchanged and green (16/16 course e2e checks) | ✅ |
+| 192/192 unit tests (61 of them prove every practice position sound) | ✅ |
+| Zero console errors, zero layout overflow | ✅ |
+
+Footer must now read **App build 2026.10.04-7** (one hard refresh: Ctrl+Shift+R).
