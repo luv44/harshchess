@@ -112,11 +112,12 @@ export default function App() {
       </header>
 
       <main id="main" className="container">
-        <div className={`netbar ${online ? "" : "netbar--offline"}`} role="status" aria-live="polite">
-          <span className={`pill ${online ? "pill--ok" : "pill--warn"}`}>{online ? "Online" : "Offline — board & saved games stay available; login/purchase/sync need network"}</span>
-          {!online && <span>Engine cache + local progress remain. Reconnect to sync or restore Pro.</span>}
-          {online && <span style={{ color: "var(--muted)", fontSize: ".82rem" }}>PWA shell cached. Unsaved browser storage may be evicted — sync via Account keeps games.</span>}
-        </div>
+        {!online && (
+          <div className="netbar netbar--offline" role="status" aria-live="polite">
+            <span className="pill pill--warn">Offline — your board and saved games keep working. Sign-in and sync need internet.</span>
+            <span>Your progress stays on this device. Reconnect to sync or restore Pro.</span>
+          </div>
+        )}
 
         {tab === "home" && <HomePage onGo={setTab} game={game} homeAction={homeAction} canInstall={canInstall} onInstall={doInstall} tag={tag} />}
         {tab === "play" && <PlayPage game={game} onGo={setTab} />}
@@ -137,7 +138,7 @@ export default function App() {
             <span style={{ marginLeft: 6 }}>No ads — AdSense optional future phase only.</span>
           </p>
           <p style={{ marginTop: 8, fontSize: ".78rem", opacity: .7 }}>PWA: manifest + icons + sw.js · offline shell cached; login/purchase/sync need network · Safari iPhone: Share → Add to Home Screen</p>
-          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-4</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
+          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-5</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
         </div>
       </footer>
     </>
@@ -688,14 +689,13 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
   // Saved games: only real local game (never sample data)
   const hasGame = game.historySan.length > 0;
   const dateLabel = (() => { try { const s = loadSession(); return s?.updatedAt ? new Date(s.updatedAt).toLocaleString() : null; } catch { return null; }})();
-  const side = game.historySan.length % 2 === 0 ? "White to move" : "Black to move";
   const status = getStatusText(game.status);
 
   if (!reviewFen && !hasGame) {
     return (
       <section className="section">
         <h2>Games — your chess journal</h2>
-        <p style={{ color: "var(--muted)", marginTop: 6 }}>Real saved games only — no sample games are shown as history.</p>
+        <p style={{ color: "var(--muted)", marginTop: 6 }}>Games you play are saved here automatically — nothing made up.</p>
         <div className="card empty-state" style={{ marginTop: 14 }}>
           <div style={{ width: 56, height: 56, borderRadius: 999, background: "var(--brass-soft)", display: "grid", placeItems: "center", border: "1px solid #E8D9BE" }}><Icon d={Paths.games} size={24} /></div>
           <h3>No saved games yet</h3>
@@ -709,7 +709,7 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
   return (
     <section className="section">
       <h2>Games — your chess journal</h2>
-      <p style={{ color: "var(--muted)", marginTop: 6 }}>Most recent first — status, date, side and move count from actual data.</p>
+      <p style={{ color: "var(--muted)", marginTop: 6 }}>Saved automatically on this device — resume or replay any time.</p>
 
       {!reviewFen ? (
         <div className="card" style={{ marginTop: 14 }}>
@@ -717,7 +717,7 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
             <div>
               <strong>Current saved game</strong>
               <div style={{ fontSize: ".86rem", color: "var(--muted)", marginTop: 4 }}>
-                {status.title} · {side} · {game.historySan.length} move{game.historySan.length!==1?"s":""} {dateLabel && <>· {dateLabel}</>}
+                {status.title} · {game.historySan.length} move{game.historySan.length!==1?"s":""} {dateLabel && <>· {dateLabel}</>}
               </div>
             </div>
             <span className={`pill ${game.status.kind==="active" ? "pill--ok" : "pill--warn"}`}>{game.status.kind}</span>
@@ -727,7 +727,11 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
             <button className="btn btn--sm" onClick={() => { setReviewFen(game.fen); setReviewPly(totalPly); }}>Review</button>
             <button className="btn btn--ghost btn--sm" onClick={game.newGame}>New game</button>
           </div>
-          {game.pgn && <p style={{ marginTop: 10, fontSize: ".82rem", color: "var(--muted)", fontFamily: "JetBrains Mono, monospace" }}>{game.pgn}</p>}
+          {game.historySan.length > 0 && (
+            <p style={{ marginTop: 10, fontSize: ".82rem", color: "var(--muted)", fontFamily: "JetBrains Mono, monospace" }}>
+              {game.historySan.slice(0, 12).map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ")}{game.historySan.length > 12 ? " …" : ""}
+            </p>
+          )}
         </div>
       ) : (
         <div className="card" style={{ marginTop: 14 }}>
@@ -757,37 +761,11 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
               } catch { setReviewFen(game.fen); setReviewPly(totalPly); }
             }}>Next ▶</button>
             <button className="btn btn--ghost btn--sm" onClick={() => { setReviewFen(game.fen); setReviewPly(totalPly); }}>Latest</button>
-            <span className="pill pill--off">{game.pgn ? game.pgn.split(" ").slice(0, 8).join(" ") : "(no moves)"}</span>
+            <span className="pill pill--off">{game.historySan.length ? game.historySan.slice(0, 8).map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ") : "(no moves)"}</span>
           </div>
         </div>
       )}
-
-      <div className="card" style={{ marginTop: 12 }}>
-        <h3>About this journal</h3>
-        <p style={{ marginTop: 6, fontSize: ".9rem" }}>Only your real games appear. Technical FEN/PGN are kept accurate but shown as secondary details — the journal title is not a hash.</p>
-        <MiniBoardRow />
-      </div>
     </section>
-  );
-}
-
-function MiniBoardRow() {
-  const positions = [
-    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-    "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
-  ];
-  return (
-    <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-      {positions.map((fen) => (
-        <div key={fen} style={{ width: 96, border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "var(--surface-raised)" }}>
-          <div style={{ transform: "scale(.92)", transformOrigin: "top left", width: "108%", pointerEvents: "none" }}>
-            <ChessBoard fen={fen} orientation="w" lastMove={null} getLegalTargets={() => []} isPromotionMove={() => false} tryMove={() => false} hideLegend />
-          </div>
-          <div style={{ fontSize: ".72rem", padding: "4px 6px", color: "var(--muted)", borderTop: "1px solid var(--line)", fontFamily: "JetBrains Mono, monospace" }}>{fen.slice(0, 22)}…</div>
-        </div>
-      ))}
-      <div style={{ alignSelf: "center", fontSize: ".82rem", color: "var(--muted)" }}>Miniature boards use the same piece family — no mix of glyph styles.</div>
-    </div>
   );
 }
 

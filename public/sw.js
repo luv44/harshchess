@@ -4,7 +4,7 @@
 // first game), network-first for HTML navigation so new deploys are not stuck.
 // Never destroys IndexedDB/localStorage saved games on update. Versioned cache name.
 
-const CACHE = "cwm-v10-2026-10-04-b";
+const CACHE = "cwm-v10-2026-10-04-c";
 // Relative to wherever this worker is served from, so the same file works
 // at a domain root and in a sub-folder.
 const ROOT = new URL("./", self.location.href);

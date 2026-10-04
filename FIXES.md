@@ -297,3 +297,27 @@ never earned. Both pages are now **rebuilt from scratch and verified end-to-end*
 If your screen still shows the old Learn/Brain, do one hard refresh (**Ctrl+Shift+R**, or on
 phone: pull-to-refresh / clear site data) — the build number at the bottom must read
 **2026.10.04-4**.
+
+---
+
+## Report 6 — journal page cleaned up (App build 2026.10.04-5)
+
+You pointed at the part in/above the Games journal that still looked unfinished. I found the
+offenders and removed them:
+
+| Removed / fixed | Why |
+|---|---|
+| ❌ Raw PGN dump (`[Event "?"] [Site "?"] [Date "????.??.??"]…`) | Looked like broken debug text — question marks everywhere. Replaced with a clean move list ("1. e4 e5 …"). |
+| ❌ "About this journal" card + two mini boards with FEN strings | Developer leftovers ("the journal title is not a hash", `rnbqkbnr/pppp…`). Removed entirely. |
+| ❌ Always-on status strip above the journal ("PWA shell cached. Unsaved browser storage may be evicted…") | Technical noise at the top of every page. Now the strip only appears when you're actually **offline** (with a friendly message). |
+| 🐛 "White to move · White to move · 2 moves" | The status was printed twice. Now: "White to move · 2 moves · date". |
+| 🐛 Review pill showed `[Event "?"]…` too | Now shows the first moves ("1. e4 e5"). |
+
+**What stays and still works** (verified on phone width 390px): your game auto-saves and appears
+in the journal ("Current saved game — White to move · 2 moves"), **Resume / Review / New game**
+all work, Review steps move-by-move (◀ Prev / Next ▶ / Latest), zero layout overflow, zero
+console errors, offline banner appears only when truly offline.
+
+If you meant a *different* part (or want the whole Games tab removed), tell me which — your
+screenshots still don't reach me, so describe it in words (what the text says) and I'll take it out.
+Footer must now read **App build 2026.10.04-5** (hard refresh once: Ctrl+Shift+R).
