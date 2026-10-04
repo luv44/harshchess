@@ -588,3 +588,35 @@ h3{ font-size:1.02rem; }
 /* ---- Brain: skill bars ---- */
 .skill-bar{ height:10px; border-radius:999px; background: var(--surface-2); border:1px solid var(--line); overflow:hidden; }
 .skill-bar__fill{ height:100%; background: linear-gradient(90deg, #7FBF8E, #4E9463); border-radius:999px; transition: width .4s ease; }
+
+/* ----- Games journal & review move lists ----- */
+.journal-moves {
+  margin-top: 10px;
+  font-size: .82rem;
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  line-height: 1.8;
+  word-break: break-word;
+}
+.review-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 14px;
+  justify-content: center;
+}
+.review-moves__row { display: inline-flex; gap: 2px; align-items: center; }
+.review-moves__num { color: var(--muted); font-size: .78rem; min-width: 1.7em; text-align: right; }
+.review-moves__san {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font: inherit;
+  font-size: .88rem;
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 30px;
+}
+.review-moves__san:hover { background: var(--surface-2); }
+.review-moves__san--cur { background: var(--brass-soft); border-color: #E8D9BE; font-weight: 700; }

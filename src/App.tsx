@@ -138,7 +138,7 @@ export default function App() {
             <span style={{ marginLeft: 6 }}>No ads — AdSense optional future phase only.</span>
           </p>
           <p style={{ marginTop: 8, fontSize: ".78rem", opacity: .7 }}>PWA: manifest + icons + sw.js · offline shell cached; login/purchase/sync need network · Safari iPhone: Share → Add to Home Screen</p>
-          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-5</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
+          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-6</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
         </div>
       </footer>
     </>
@@ -690,6 +690,17 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
   const hasGame = game.historySan.length > 0;
   const dateLabel = (() => { try { const s = loadSession(); return s?.updatedAt ? new Date(s.updatedAt).toLocaleString() : null; } catch { return null; }})();
   const status = getStatusText(game.status);
+  // Replay the real saved history up to a given ply (chess.js undo() cannot walk a FEN — it has no history).
+  const replayTo = (ply: number) => {
+    try {
+      const hist = game.historyVerbose;
+      const n = Math.max(0, Math.min(hist.length, ply));
+      const replay = new Chess();
+      for (let i = 0; i < n; i++) replay.move({ from: hist[i].from, to: hist[i].to, promotion: hist[i].promotion as never });
+      setReviewFen(replay.fen());
+      setReviewPly(n);
+    } catch { setReviewFen(game.fen); setReviewPly(totalPly); }
+  };
 
   if (!reviewFen && !hasGame) {
     return (
@@ -728,8 +739,8 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
             <button className="btn btn--ghost btn--sm" onClick={game.newGame}>New game</button>
           </div>
           {game.historySan.length > 0 && (
-            <p style={{ marginTop: 10, fontSize: ".82rem", color: "var(--muted)", fontFamily: "JetBrains Mono, monospace" }}>
-              {game.historySan.slice(0, 12).map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ")}{game.historySan.length > 12 ? " …" : ""}
+            <p className="journal-moves">
+              {game.historySan.map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ")}
             </p>
           )}
         </div>
@@ -739,30 +750,31 @@ function GamesPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo
             <h3>Review — move by move</h3>
             <button className="btn btn--ghost btn--sm" onClick={() => { setReviewFen(null); setReviewPly(null); }}>Back to games</button>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: ".86rem", marginTop: 6 }}>Move {reviewPly !== null ? reviewPly : history.length} of {totalPly} being examined — the board and controls stay connected.</p>
+          <p style={{ color: "var(--muted)", fontSize: ".86rem", marginTop: 6 }}>Move {reviewPly !== null ? reviewPly : history.length} of {totalPly} — use ◀ Prev / Next ▶ or tap any move below.</p>
           <div style={{ maxWidth: 420, margin: "12px auto" }}>
             <ChessBoard fen={fen} orientation={game.orientation} lastMove={null} getLegalTargets={() => []} isPromotionMove={() => false} tryMove={() => false} canPickUp={() => false} hideLegend />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-            <button className="btn btn--sm" disabled={(reviewPly ?? totalPly) <= 0} onClick={() => {
-              try {
-                const c = new Chess(fen); c.undo(); setReviewFen(c.fen()); setReviewPly((p) => Math.max(0, (p ?? totalPly) - 1));
-              } catch {}
-            }}>◀ Prev</button>
-            <button className="btn btn--sm" disabled={(reviewPly ?? totalPly) >= totalPly} onClick={() => {
-              try {
-                // Replay game PGN up to next ply
-                const tmp = new Chess(); try { tmp.loadPgn(game.pgn); } catch {}
-                const hist = tmp.history({ verbose: true });
-                const nextPly = Math.min(totalPly, (reviewPly ?? hist.length) + 1);
-                const replay = new Chess();
-                for (let i = 0; i < nextPly; i++) replay.move({ from: hist[i].from, to: hist[i].to, promotion: hist[i].promotion as never });
-                setReviewFen(replay.fen()); setReviewPly(nextPly);
-              } catch { setReviewFen(game.fen); setReviewPly(totalPly); }
-            }}>Next ▶</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => { setReviewFen(game.fen); setReviewPly(totalPly); }}>Latest</button>
-            <span className="pill pill--off">{game.historySan.length ? game.historySan.slice(0, 8).map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ") : "(no moves)"}</span>
+            <button className="btn btn--sm" disabled={(reviewPly ?? totalPly) <= 0} onClick={() => replayTo((reviewPly ?? totalPly) - 1)}>◀ Prev</button>
+            <button className="btn btn--sm btn--primary" disabled={(reviewPly ?? totalPly) >= totalPly} onClick={() => replayTo((reviewPly ?? totalPly) + 1)}>Next ▶</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => replayTo(totalPly)}>Latest</button>
           </div>
+          {game.historySan.length > 0 && (
+            <div className="review-moves" aria-label="All moves of this game">
+              {Array.from({ length: Math.ceil(game.historySan.length / 2) }, (_, i) => (
+                <span key={i} className="review-moves__row">
+                  <span className="review-moves__num">{i + 1}.</span>
+                  {[0, 1].map((j) => {
+                    const ply = i * 2 + j;
+                    const san = game.historySan[ply];
+                    if (!san) return null;
+                    const cur = ply + 1 === (reviewPly ?? totalPly);
+                    return <button key={ply} className={`review-moves__san${cur ? " review-moves__san--cur" : ""}`} aria-current={cur ? "true" : undefined} onClick={() => replayTo(ply + 1)}>{san}</button>;
+                  })}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>

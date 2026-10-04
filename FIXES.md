@@ -321,3 +321,25 @@ console errors, offline banner appears only when truly offline.
 If you meant a *different* part (or want the whole Games tab removed), tell me which — your
 screenshots still don't reach me, so describe it in words (what the text says) and I'll take it out.
 Footer must now read **App build 2026.10.04-5** (hard refresh once: Ctrl+Shift+R).
+
+---
+
+## Report 7 — move list now shows the FULL game + Prev button fixed (App build 2026.10.04-6)
+
+You reported two bugs in the Games journal — both real, both fixed:
+
+| Bug you saw | Cause | Fix |
+|---|---|---|
+| **Move list stops partway** (e.g. at "d5") | I had capped the display at the first 12 moves (journal) and 8 moves (review) | Now the **full game** is shown — every move, however long |
+| **◀ Prev button "not working"** | Real bug: Prev used `chess.undo()` on a position built from a FEN — a FEN has no move history, so the board **never moved back** (only the counter changed) | Prev/Next/Latest now replay the real saved move history to the exact ply — the **board itself** steps back and forward |
+
+**Bonus:** the review now has a **clickable full move list** under the board — tap any move (e4, d5, Nf3…) to jump straight to that position; the current move is highlighted.
+
+Verified on phone width 390px with a 6-move game (1. e4 e5 2. d4 d5 3. Nf3 Nc6):
+- journal shows the complete list, no "…" cutoff ✓
+- ◀ Prev rewinds the board (verified the actual squares change, twice) ✓
+- Next ▶ advances ✓
+- tapping "e4" jumps to move 1, highlight follows ✓
+- no layout overflow, zero console errors, 131/131 tests ✓
+
+Footer must now read **App build 2026.10.04-6** (one hard refresh: Ctrl+Shift+R).
