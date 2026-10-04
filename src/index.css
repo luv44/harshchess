@@ -535,3 +535,56 @@ h3{ font-size:1.02rem; }
   .opponent-setup .seg{ flex:0 0 auto; }
   .opponent-setup .strength-row{ flex:1 1 300px; margin:0; }
 }
+
+/* ---- Learn: course list ---- */
+.lesson-list{ counter-reset: lesson; }
+.lesson-row{
+  appearance:none; width:100%; text-align:left; cursor:pointer; font:inherit; color:inherit;
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border:1px solid var(--line); border-radius:14px; background: var(--surface-raised);
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.lesson-row:hover{ border-color: var(--brass-2); box-shadow: 0 8px 20px rgba(43,27,14,.10); transform: translateY(-1px); }
+.lesson-row--active{ border-color: var(--brass); border-width: 2px; padding: 11px 13px; background: var(--brass-soft); }
+.lesson-row--done{ background: #F4FAF4; }
+.lesson-row__num{
+  flex:0 0 30px; height:30px; border-radius:999px; display:grid; place-items:center;
+  background: var(--surface-2); border:1px solid var(--line-strong); font-weight:800; font-size:.85rem;
+}
+.lesson-row--done .lesson-row__num{ background:#7FBF8E; border-color:#5E9E6E; color:#fff; }
+.lesson-row__body{ display:grid; gap:2px; min-width:0; flex:1; }
+.lesson-row__blurb{ font-size:.82rem; color: var(--muted); }
+.lesson-row__meta{ font-size:.76rem; color: var(--muted); white-space:nowrap; }
+
+/* ---- Learn: lesson player ---- */
+.lesson-step__head{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.lesson-step__heading{ font-family:Fraunces, serif; font-size:1.05rem; }
+.lesson-step__text{ margin-top:8px; font-size:.95rem; line-height:1.6; }
+.drill__goal{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:.98rem; }
+.drill__goal strong{ font-family:Fraunces, serif; font-size:1.02rem; }
+
+/* ---- Learn: puzzle grid ---- */
+.puzzle-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin-top:12px; }
+.puzzle-card{
+  appearance:none; text-align:left; cursor:pointer; font:inherit; color:inherit;
+  display:grid; gap:6px; align-content:start; padding:12px 14px;
+  border:1px solid var(--line); border-radius:14px; background: var(--surface-raised);
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.puzzle-card:hover{ transform: translateY(-2px); border-color: var(--brass-2); box-shadow: 0 10px 24px rgba(43,27,14,.12); }
+.puzzle-card__meta{ font-size:.78rem; color: var(--muted); letter-spacing:.04em; }
+.puzzle-card__go{ font-size:.8rem; font-weight:800; color: var(--brass-3); }
+.puzzle-card--boss{ background: var(--ink); color:#fff; border-color: var(--ink); }
+.puzzle-card--boss .puzzle-card__meta{ color: rgba(255,249,236,.75); }
+.puzzle-card--boss .puzzle-card__go{ color: #FFC107; }
+
+/* ---- Course progress bar ---- */
+.course-progress{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.course-progress__bar{ flex:1 1 180px; height:12px; border-radius:999px; background: var(--surface-2); border:1px solid var(--line); overflow:hidden; }
+.course-progress__fill{ height:100%; background: linear-gradient(90deg, var(--brass-2), var(--brass)); border-radius:999px; transition: width .4s ease; }
+.course-progress__label{ font-size:.84rem; color: var(--muted); }
+.course-progress__label b{ color: var(--ink); }
+
+/* ---- Brain: skill bars ---- */
+.skill-bar{ height:10px; border-radius:999px; background: var(--surface-2); border:1px solid var(--line); overflow:hidden; }
+.skill-bar__fill{ height:100%; background: linear-gradient(90deg, #7FBF8E, #4E9463); border-radius:999px; transition: width .4s ease; }

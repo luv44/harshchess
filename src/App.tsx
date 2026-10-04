@@ -10,7 +10,8 @@ import { AccountPage } from "./billing/AccountPage";
 import { useLanguage } from "./i18n/useLanguage";
 import { t } from "./i18n/strings";
 import { Icon, Paths } from "./icons";
-import { loadReviews } from "./coach/learnerStorage";
+import { loadReviews, loadLearner } from "./coach/learnerStorage";
+import { LESSONS, loadLessonDone, isLessonDone, nextLesson } from "./coach/lessons";
 import { isDue as isReviewDue } from "./coach/spaced";
 import { loadSession } from "./chess/session";
 
@@ -44,9 +45,9 @@ function useHomeAction(): { label: string; to: Tab; detail: string } {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
-  /** Deep-link into a Learn practice, e.g. from Brain's "Practise hanging". */
-  const [learnRequest, setLearnRequest] = useState<{ skillId?: string; motif?: string } | null>(null);
-  const startPractice = useCallback((req: { skillId?: string; motif?: string }) => {
+  /** Deep-link into a Learn lesson/practice, e.g. from Brain's "Practise hanging". */
+  const [learnRequest, setLearnRequest] = useState<{ lessonId?: string; skillId?: string; motif?: string } | null>(null);
+  const startPractice = useCallback((req: { lessonId?: string; skillId?: string; motif?: string }) => {
     setLearnRequest(req);
     setTab("learn");
   }, []);
@@ -120,8 +121,8 @@ export default function App() {
         {tab === "home" && <HomePage onGo={setTab} game={game} homeAction={homeAction} canInstall={canInstall} onInstall={doInstall} tag={tag} />}
         {tab === "play" && <PlayPage game={game} onGo={setTab} />}
         {tab === "games" && <GamesPage game={game} onGo={setTab} />}
-        {tab === "learn" && <LearnPage tag={tag} setTag={setTag} level={level} setLevel={setLevel} startRequest={learnRequest} onStartRequestConsumed={() => setLearnRequest(null)} />}
-        {tab === "brain" && <BrainPage onGo={setTab} onPractise={startPractice} tag={tag} />}
+        {tab === "learn" && <LearnPage tag={tag} setTag={setTag} startRequest={learnRequest} onStartRequestConsumed={() => setLearnRequest(null)} />}
+        {tab === "brain" && <BrainPage onGo={setTab} onPractise={startPractice} />}
         {tab === "account" && <AccountPage />}
         {tab === "status" && <StatusPage tag={tag} canInstall={canInstall} onInstall={doInstall} />}
       </main>
@@ -136,6 +137,7 @@ export default function App() {
             <span style={{ marginLeft: 6 }}>No ads — AdSense optional future phase only.</span>
           </p>
           <p style={{ marginTop: 8, fontSize: ".78rem", opacity: .7 }}>PWA: manifest + icons + sw.js · offline shell cached; login/purchase/sync need network · Safari iPhone: Share → Add to Home Screen</p>
+          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-4</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
         </div>
       </footer>
     </>
@@ -789,57 +791,131 @@ function MiniBoardRow() {
   );
 }
 
-function BrainPage({ onGo, onPractise, tag: _tag }: { onGo: (t: Tab) => void; onPractise: (req: { skillId?: string; motif?: string }) => void; tag: string }) {
-  void _tag;
+const FRIENDLY: Record<string, string> = {
+  recognition: "Board vision",
+  calculation: "Calculation",
+  hanging: "Spotting hanging pieces",
+  checks: "Checks & mate",
+  captures: "Captures",
+  kingSafety: "King safety",
+  opening: "Opening moves",
+  endgame: "Endgames",
+};
+
+function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (req: { lessonId?: string; skillId?: string; motif?: string }) => void }) {
   const reviews = (() => { try { return loadReviews(); } catch { return []; } })();
-  if (reviews.length === 0) {
-    return (
-      <section className="section">
-        <h2>Brain — your learning evidence</h2>
-        <div className="card empty-state" style={{ marginTop: 14 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 999, background: "var(--brass-soft)", border: "1px solid #E8D9BE", display: "grid", placeItems: "center" }}><Icon d={Paths.brain} size={24} /></div>
-          <h3>Your journey is beginning</h3>
-          <p>Play a few exercises — Brain will show what to practise next from real, verified evidence. No invented rating yet.</p>
-          <button className="btn btn--primary" onClick={() => onPractise({ motif: "hanging" })}>Start a practice</button>
-        </div>
-      </section>
-    );
-  }
-  // Simple honest evidence view — no invented percentages
-  const due = reviews.filter((r) => isReviewDue(r, new Date().toISOString()));
+  const done = loadLessonDone();
+  const learner = loadLearner();
+  const now = new Date().toISOString();
+  const courseDone = LESSONS.filter((l) => isLessonDone(done, l.id)).length;
+  const courseComplete = courseDone === LESSONS.length;
+  const upNext = nextLesson(done);
+  const due = reviews.filter((r) => isReviewDue(r, now));
+
+  // recent real attempts (evidence, newest first)
+  const recent = Object.values(learner.skills)
+    .flatMap((sk) => sk.attempts.map((a) => ({ ...a })))
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, 4);
+
+  const recommendation = !courseComplete
+    ? { kind: "lesson" as const, lesson: upNext }
+    : due.length > 0
+      ? { kind: "review" as const, skill: due[0] }
+      : { kind: "puzzle" as const };
+
   return (
     <section className="section">
-      <h2>Brain — what should I practise next?</h2>
-      <p style={{ color: "var(--muted)", marginTop: 6 }}>Everyday language, simple evidence. Independent success vs success after hints kept separate where data permits.</p>
+      <h2>Brain — your chess coach</h2>
+      <p style={{ color: "var(--muted)", marginTop: 6 }}>What to practise next, based only on what you have actually done. No invented ratings.</p>
 
-      {due.length > 0 ? (
-        <div className="card card--raised" style={{ marginTop: 14 }}>
-          <div className="pill pill--warn" style={{ width: "fit-content" }}>Up next</div>
-          <h3 style={{ marginTop: 8 }}>Refresh: {due[0].skillId}</h3>
-          <p style={{ marginTop: 6, fontSize: ".9rem" }}>Recall is below your threshold — a short review is the best next step. Evidence: last review interval {due[0].intervalDays}d.</p>
-          <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={() => onPractise({ skillId: due[0].skillId })}>Practise {due[0].skillId}</button>
-        </div>
-      ) : (
-        <div className="card" style={{ marginTop: 14 }}>
-          <h3>Nothing due right now</h3>
-          <p style={{ marginTop: 6 }}>Your recall is above threshold. Try a new lesson — it will create the next meaningful evidence.</p>
-          <button className="btn btn--quiet btn--sm" style={{ marginTop: 10 }} onClick={() => onGo("learn")}>Browse lessons</button>
-        </div>
-      )}
+      {/* Recommendation */}
+      <div className="card card--raised" style={{ marginTop: 14 }}>
+        <div className="pill pill--brass" style={{ width: "fit-content" }}>Up next</div>
+        {recommendation.kind === "lesson" && (
+          <>
+            <h3 style={{ marginTop: 8 }}>Continue your course: {recommendation.lesson.title}</h3>
+            <p style={{ marginTop: 6, fontSize: ".92rem" }}>{recommendation.lesson.blurb} · {recommendation.lesson.minutes} min</p>
+            <button className="btn btn--primary" style={{ marginTop: 10 }} onClick={() => onPractise({ lessonId: recommendation.lesson.id })}>Start this lesson →</button>
+          </>
+        )}
+        {recommendation.kind === "review" && (
+          <>
+            <h3 style={{ marginTop: 8 }}>Refresh: {recommendation.skill.skillId}</h3>
+            <p style={{ marginTop: 6, fontSize: ".92rem" }}>You practised this before and recall fades — one quick puzzle brings it back.</p>
+            <button className="btn btn--primary" style={{ marginTop: 10 }} onClick={() => onPractise({ skillId: recommendation.skill.skillId })}>Practise {recommendation.skill.skillId} →</button>
+          </>
+        )}
+        {recommendation.kind === "puzzle" && (
+          <>
+            <h3 style={{ marginTop: 8 }}>Course complete — keep sharp</h3>
+            <p style={{ marginTop: 6, fontSize: ".92rem" }}>You have finished every lesson and nothing is due. A random puzzle keeps your vision sharp.</p>
+            <button className="btn btn--primary" style={{ marginTop: 10 }} onClick={() => onPractise({ motif: "hanging" })}>Solve a puzzle →</button>
+          </>
+        )}
+      </div>
 
+      {/* Course progress */}
       <div className="card" style={{ marginTop: 12 }}>
-        <h3>Genuine skills</h3>
-        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-          {reviews.slice(0, 6).map((r) => (
-            <button key={r.id} type="button" className={`skill-row ${isReviewDue(r, new Date().toISOString()) ? "skill-row--due" : ""}`} onClick={() => onPractise({ skillId: r.skillId })} aria-label={`Practise ${r.skillId} — interval ${r.intervalDays} days, due ${new Date(r.dueAt).toLocaleDateString()}`}>
-              <span style={{ fontWeight: 700, fontSize: ".9rem" }}>{r.skillId}</span>
-              <span style={{ fontSize: ".82rem", color: "var(--muted)" }}>interval {r.intervalDays}d · due {new Date(r.dueAt).toLocaleDateString()}</span>
-              <span className={`pill ${isReviewDue(r, new Date().toISOString()) ? "pill--warn" : "pill--ok"}`}>{isReviewDue(r, new Date().toISOString()) ? "Due" : "Scheduled"}</span>
-              <span className="skill-row__go" aria-hidden="true">Practise →</span>
-            </button>
-          ))}
+        <h3>Course progress</h3>
+        <div className="course-progress" style={{ marginTop: 10 }}>
+          <div className="course-progress__bar">
+            <div className="course-progress__fill" style={{ width: `${(courseDone / LESSONS.length) * 100}%` }} />
+          </div>
+          <span className="course-progress__label"><b>{courseDone}</b> of {LESSONS.length} lessons</span>
         </div>
-        <p style={{ marginTop: 10, fontSize: ".82rem", color: "var(--muted)" }}>Deeper statistics only where they help understanding — not as decoration.</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <button className="btn btn--quiet btn--sm" onClick={() => onPractise({ lessonId: upNext.id })}>{courseComplete ? "Revisit course" : "Continue course"}</button>
+          <button className="btn btn--ghost btn--sm" onClick={() => onGo("learn")}>Browse all lessons</button>
+        </div>
+      </div>
+
+      {/* Skills — friendly names, honest progress, one-click practice */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <h3>Your skills</h3>
+        <p style={{ color: "var(--muted)", fontSize: ".86rem", marginTop: 4 }}>Built from your lesson and puzzle results. Bars grow with independent (unhinted) success.</p>
+        <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+          {(["opening", "hanging", "checks", "kingSafety", "captures", "endgame", "calculation"] as const).map((sid) => {
+            const st = learner.skills[sid];
+            const pct = Math.round((st?.proficiency ?? 0) * 100);
+            const attempts = st?.attempts.length ?? 0;
+            const review = reviews.find((r) => r.skillId === sid);
+            const skillDue = review ? isReviewDue(review, now) : false;
+            return (
+              <div key={sid} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: "10px 12px", background: skillDue ? "var(--warn-soft)" : "var(--surface-raised)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <strong style={{ fontSize: ".9rem" }}>{FRIENDLY[sid] ?? sid}</strong>
+                  <span style={{ fontSize: ".8rem", color: "var(--muted)" }}>{attempts === 0 ? "not practised yet" : `${attempts} attempt${attempts !== 1 ? "s" : ""}`}</span>
+                </div>
+                <div className="skill-bar" style={{ marginTop: 8 }}>
+                  <div className="skill-bar__fill" style={{ width: `${attempts === 0 ? 0 : Math.max(6, pct)}%` }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
+                  <span style={{ fontSize: ".8rem", color: "var(--muted)" }}>{attempts === 0 ? "—" : `${pct}% ${st?.uncertainty != null && st.uncertainty > 0.55 ? "· still learning" : ""}`}</span>
+                  <button className="btn btn--quiet btn--xs" onClick={() => onPractise({ skillId: sid })}>Practise →</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent activity */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <h3>Recent activity</h3>
+        {recent.length === 0 ? (
+          <p style={{ color: "var(--muted)", marginTop: 6 }}>Nothing yet — finish a lesson or solve a puzzle and it shows up here.</p>
+        ) : (
+          <ul style={{ listStyle: "none", display: "grid", gap: 6, marginTop: 10, padding: 0 }}>
+            {recent.map((a, i) => (
+              <li key={i} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: ".88rem" }}>
+                <span className={`pill ${a.correct ? "pill--ok" : "pill--warn"}`} style={{ fontSize: ".7rem" }}>{a.correct ? (a.hinted ? "✓ with hint" : "✓") : "✗"}</span>
+                <span>{FRIENDLY[a.skillId] ?? a.skillId}</span>
+                <span style={{ color: "var(--muted)", marginLeft: "auto", fontSize: ".78rem" }}>{new Date(a.at).toLocaleDateString()}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

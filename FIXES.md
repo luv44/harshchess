@@ -245,3 +245,55 @@ responding". Desktop was unaffected, which is why earlier tests passed.
 
 *(If something still looks wrong: hard-refresh once — Ctrl+Shift+R — so the
 browser drops the previously cached version.)*
+
+---
+
+## Report 5 — Learn & Brain rebuilt as real, working features (App build 2026.10.04-4)
+
+You said Learn and Brain still weren't adding functionality. You were right — the old Learn page
+showed text cards with buttons that led nowhere, and the old Brain page invented skill ratings you
+never earned. Both pages are now **rebuilt from scratch and verified end-to-end**.
+
+### What Learn is now — a real beginner course
+- **11 interactive lessons** ("The chessboard", "How pawns move", "How knights move", bishops,
+  rooks, "Check & getting out of check", "Castling", "Promotion", "Captures", "Checkmate in one",
+  "A simple opening"). Every lesson first *shows* the idea on a live board step by step
+  ("Next →"), then makes **you** play the move yourself ("Now you play it →").
+- **Real drills with move validation**: you must play the move the lesson teaches. Wrong move →
+  the piece doesn't move, you get "✗ Try again — not the move we're practising". Right move →
+  "✓ Correct!" plus *why* the move matters. Hints available ("Show hint").
+- **Progress is saved** (localStorage) — the course list shows ✓ on finished lessons and a
+  progress bar ("3 of 11 lessons done"). Your last position is kept if you leave mid-lesson.
+- **9 puzzle practice cards** (captures, hanging pieces, checks, castling, promotion, endgame,
+  calculation, transfer + a **Daily challenge**) — each opens a real solvable position with a
+  goal, hint and verdict. "Another puzzle →" gives you a fresh one.
+
+### What Brain is now — an honest coach
+- **One clear recommendation ("Up next")**: your next unfinished lesson → or a skill due for
+  review → or today's puzzle. Its button actually opens that exact lesson/practice (verified).
+- **Course progress** and **recent activity** from your real attempts only.
+- **7 skill bars with friendly names** (Spotting chances, Calculation, Choosing moves, Touch
+  precision, Using ideas in games, Checks & captures, King safety). A skill you've never
+  practised shows "—" — the app never invents a score. Each bar has a working **Practise →**
+  button that opens the matching exercise.
+
+### Verified in a real browser (both desktop 1280px and phone 390px)
+| Check | Result |
+|---|---|
+| Course shows 11 lessons + 9 puzzles + progress bar | ✅ |
+| Lesson steps → drill transition (knights: g1→f3) | ✅ |
+| Wrong move rejected with feedback, board unchanged | ✅ |
+| Correct move → "✓ Correct!" + saved ✓ on lesson + "1 of 11 done" | ✅ |
+| Promotion drill with piece chooser (a7→a8 Queen) | ✅ |
+| Castling drill (e1→g1) | ✅ |
+| Brain recommendation → deep-links to the right lesson | ✅ |
+| Brain skill "Practise →" → opens that skill's exercise | ✅ |
+| Puzzle (f3xe5) → "✓ Solved!" + Another puzzle button | ✅ |
+| Phone 390px: drill on screen, real finger-taps e2→e4 → "✓ Correct!" | ✅ |
+| Phone 390px: Brain tap → lesson opens, zero sideways overflow, zero console errors | ✅ |
+| Footer stamp | **App build 2026.10.04-4** ✅ |
+| Unit tests | 131/131 ✅ |
+
+If your screen still shows the old Learn/Brain, do one hard refresh (**Ctrl+Shift+R**, or on
+phone: pull-to-refresh / clear site data) — the build number at the bottom must read
+**2026.10.04-4**.
