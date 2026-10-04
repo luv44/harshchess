@@ -50,6 +50,10 @@ export default function App() {
     setLearnRequest(req);
     setTab("learn");
   }, []);
+
+  // Switching tabs must start at the top — otherwise the board of the new tab
+  // can sit above/below the scroll position left over from the previous page.
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [tab]);
   const game = useChessGame();
   const { tag, setTag, level, setLevel } = useLanguage();
   const online = useOnline();
@@ -314,6 +318,16 @@ function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo:
   const [teachingStep, setTeachingStep] = useState(0);
   const [whyOpen, setWhyOpen] = useState(false);
 
+  const boardCardRef = useRef<HTMLDivElement | null>(null);
+  // If the board would sit below the fold (short windows), bring it to the top
+  // on mount so every playable piece is on screen immediately.
+  useEffect(() => {
+    const el = boardCardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.bottom > window.innerHeight) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   /* ---- who may move right now (session-aware, from useChessGame/session) ---- */
   const isHumanTurn = game.mode === "watch" ? false : game.mode === "solo" ? true : game.turn === game.humanSide;
   const modeActive = game.mode !== "solo";
@@ -403,26 +417,11 @@ function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo:
               <strong>{statusBanner.title}</strong>
               <span>{statusBanner.detail}</span>
             </div>
-
-            <div className="card" style={{ padding: 14 }}>
-              <div style={{ fontSize: ".78rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--brass-3)" }}>What just happened</div>
-              {lastMoveSan ? (
-                <p style={{ marginTop: 6 }}><strong>Opponent played {lastMoveSan}</strong> {opponentLabel && <span style={{ color: "var(--muted)" }}>— {opponentLabel}</span>}</p>
-              ) : (
-                <p style={{ marginTop: 6, color: "var(--muted)" }}>No moves yet — it's White to start. You're looking at the starting position.</p>
-              )}
-              {lastMoveVerbose?.captured && <p style={{ fontSize: ".86rem", color: "var(--muted)" }}>A capture happened on {lastMoveVerbose.to} — notice what squares opened.</p>}
-              {verifiedNotice && !focusMode && <p style={{ fontSize: ".86rem", marginTop: 6 }}><span className="pill pill--brass" style={{ fontSize: ".7rem" }}>Verified</span> {verifiedNotice}</p>}
-            </div>
-
-            <div className="inspector__question">
-              <div className="inspector__eyebrow">Your question</div>
-              <strong>{turnQ}</strong>
-              <p className="inspector__hint">Tap a highlighted square to move — or drag. Take your time.</p>
-            </div>
           </div>
 
-          <div className="card play-card">
+          {/* Board first — it is the hero of this page. On shorter screens the
+              previous order pushed every playable piece below the fold. */}
+          <div className="card play-card" ref={boardCardRef} style={{ scrollMarginTop: 76 }}>
             <div className="play-toolbar">
               <h2 className="serif" style={{ fontSize: "1.05rem" }}>
                 Board — {game.mode === "vsComputer" ? `vs Computer (${computerStrength}/10)` : game.mode === "watch" ? "watching the computer play itself" : "two-player local"}
@@ -435,7 +434,7 @@ function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo:
             </div>
 
             {/* Opponent setup — mode, side, strength. Real Stockfish settings per level. */}
-            <div className="opponent-setup" style={{ display: "grid", gap: 10, marginTop: 10 }}>
+            <div className="opponent-setup">
               <div className="seg" role="group" aria-label="Game mode">
                 {([["solo", "Two players"], ["vsComputer", "vs Computer"], ["watch", "Watch"]] as const).map(([m, label]) => (
                   <button key={m} type="button" className={`seg__btn ${game.mode === m ? "seg__btn--on" : ""}`} aria-pressed={game.mode === m} onClick={() => game.setMode(m)}>{label}</button>
@@ -598,6 +597,26 @@ function PlayPage({ game, onGo }: { game: ReturnType<typeof useChessGame>; onGo:
                 <button className="btn btn--ghost" disabled={!liveAnalysis || !liveAnalysis.bestUci || (modeActive && !isHumanTurn)} title={modeActive && !isHumanTurn ? "Wait for the computer reply" : "Play the engine verified best move"} onClick={() => { const mv = engine.playBestMove(game.fen); if (mv) game.tryHumanMove(mv.from as never, mv.to as never, mv.promotion as never); }}>Play best</button>
               </div>
               <p className="engine-panel__meta">WASM Stockfish 19 lite · coaching depth 12 · 3 lines · bounded · stale results ignored (ID + FEN). Computer strength {computerStrength}/10 uses its own bounded search (skill, depth, nodes, move-time). GPLv3.</p>
+            </div>
+          </div>
+
+          {/* What happened / coaching context — directly under the board */}
+          <div className="inspector">
+            <div className="card" style={{ padding: 14 }}>
+              <div style={{ fontSize: ".78rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--brass-3)" }}>What just happened</div>
+              {lastMoveSan ? (
+                <p style={{ marginTop: 6 }}><strong>Opponent played {lastMoveSan}</strong> {opponentLabel && <span style={{ color: "var(--muted)" }}>— {opponentLabel}</span>}</p>
+              ) : (
+                <p style={{ marginTop: 6, color: "var(--muted)" }}>No moves yet — it's White to start. You're looking at the starting position.</p>
+              )}
+              {lastMoveVerbose?.captured && <p style={{ fontSize: ".86rem", color: "var(--muted)" }}>A capture happened on {lastMoveVerbose.to} — notice what squares opened.</p>}
+              {verifiedNotice && !focusMode && <p style={{ fontSize: ".86rem", marginTop: 6 }}><span className="pill pill--brass" style={{ fontSize: ".7rem" }}>Verified</span> {verifiedNotice}</p>}
+            </div>
+
+            <div className="inspector__question">
+              <div className="inspector__eyebrow">Your question</div>
+              <strong>{turnQ}</strong>
+              <p className="inspector__hint">Tap a highlighted square to move — or drag. Take your time.</p>
             </div>
           </div>
         </div>
@@ -812,11 +831,12 @@ function BrainPage({ onGo, onPractise, tag: _tag }: { onGo: (t: Tab) => void; on
         <h3>Genuine skills</h3>
         <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
           {reviews.slice(0, 6).map((r) => (
-            <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", border: "1px solid var(--line)", borderRadius: 12, padding: "10px 12px", background: isReviewDue(r, new Date().toISOString()) ? "var(--warn-soft)" : "var(--surface-raised)" }}>
+            <button key={r.id} type="button" className={`skill-row ${isReviewDue(r, new Date().toISOString()) ? "skill-row--due" : ""}`} onClick={() => onPractise({ skillId: r.skillId })} aria-label={`Practise ${r.skillId} — interval ${r.intervalDays} days, due ${new Date(r.dueAt).toLocaleDateString()}`}>
               <span style={{ fontWeight: 700, fontSize: ".9rem" }}>{r.skillId}</span>
               <span style={{ fontSize: ".82rem", color: "var(--muted)" }}>interval {r.intervalDays}d · due {new Date(r.dueAt).toLocaleDateString()}</span>
               <span className={`pill ${isReviewDue(r, new Date().toISOString()) ? "pill--warn" : "pill--ok"}`}>{isReviewDue(r, new Date().toISOString()) ? "Due" : "Scheduled"}</span>
-            </div>
+              <span className="skill-row__go" aria-hidden="true">Practise →</span>
+            </button>
           ))}
         </div>
         <p style={{ marginTop: 10, fontSize: ".82rem", color: "var(--muted)" }}>Deeper statistics only where they help understanding — not as decoration.</p>

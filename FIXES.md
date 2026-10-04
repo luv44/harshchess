@@ -191,3 +191,57 @@ that was the URL being tried, it now runs again alongside the dev preview.
   their expected visible change; Scholar's-mate exercise gives
   "✓ Correct! Qxf7# was the best move in this position."
 - 131/131 unit tests, tsc clean, production build clean, zero page errors.
+
+---
+
+# Fix report 4 — 2026-10-04 ("pieces not responding" — root cause found)
+
+> "brain tab inside when u r selecting its chess piece r not responding"
+
+(The attached screenshot again did not reach the sandbox; everything below was
+reproduced with **real mouse clicks and real touch taps** — previous tests used
+DOM `.click()`, which bypasses hit-testing and hid these bugs.)
+
+## Root cause — the board broke on phones
+
+`.board__square` had `aspect-ratio:1` **plus** `min-height:44px`. On any board
+narrower than 352 px (every phone), min-height won: cells rendered **44×44 px
+inside ~35–35.5 px grid columns**. Measured at 390 px: board 284 px wide ×
+354 px tall (not square), squares overlapping each other and overflowing the
+frame, so **taps landed on the wrong square** — pieces appeared "not
+responding". Desktop was unaffected, which is why earlier tests passed.
+
+### Fix
+- Removed the conflicting `min-height` (cells are now perfectly square at every
+  size: verified 284×284 @390, 254×254 @360) and added
+  `touch-action:manipulation` to kill double-tap-zoom delay on the squares.
+
+## Also found with real input
+
+1. **Play board below the fold on laptops.** At 1280×1000 the bottom half of
+   the board (all White pieces!) was off-screen — e2 was at y=1241. Clicking
+   the visible Black pieces does nothing (they're the computer's), which also
+   reads as "pieces not responding".
+   - The board is now **first** on the Play page (right after the one-line
+     status banner); coaching cards moved below it.
+   - The opponent setup is a compact single row on wide screens.
+   - If the board still wouldn't fit (short windows), the page auto-scrolls it
+     into view on mount.
+2. **SPA kept the old scroll position when switching tabs** — you could land
+   mid-page on the new tab. Tab changes now scroll to the top.
+3. **Brain "Genuine skills" rows were plain divs** — tapping "hanging" /
+   "checks" did nothing. They are now real buttons ("Practise →") that open
+   that skill's practice immediately (due rows highlighted).
+
+## Verified with real input (mouse + touchscreen emulation)
+
+- 390 px & 360 px phones: square boards/cells, tap f3 → 4 legal dots, tap e5 →
+  "✓ Correct! Nxe5…", Black correctly locked, Brain row tap → "Practice —
+  check · ex-check-1" opened + scrolled, vs Computer tap-move → reply in
+  ~0.9–1.0 s, 0 px horizontal overflow, zero page errors.
+- Desktop 1280×1000: real mouse e2→e4, computer replied in ~0.97 s, board
+  fully on screen, hit-test at e2 returns the square.
+- 131/131 unit tests, `tsc` clean, production build clean.
+
+*(If something still looks wrong: hard-refresh once — Ctrl+Shift+R — so the
+browser drops the previously cached version.)*

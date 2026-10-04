@@ -287,9 +287,15 @@ h3{ font-size:1.02rem; }
 .board{ direction:ltr; }
 
 /* squares */
+/* Squares must stay PERFECTLY square at every screen size. A previous
+   min-height:44px overrode aspect-ratio on narrow phones (<352px boards),
+   inflating cells to 44x44 inside ~35px grid columns — squares overlapped,
+   overflowed the frame and taps landed on the wrong square. aspect-ratio
+   alone keeps cells square; touch-action kills the double-tap-zoom delay. */
 .board__square{
   position:relative; aspect-ratio:1; border:none; padding:0; display:grid; place-items:center; cursor:pointer;
-  min-width:0; min-height:44px; user-select:none; -webkit-tap-highlight-color: transparent;
+  min-width:0; min-height:0; user-select:none; -webkit-tap-highlight-color: transparent;
+  touch-action:manipulation;
   transition: filter .12s, box-shadow .12s;
 }
 .board__square:focus-visible{ outline:3px solid var(--focus); outline-offset:-3px; z-index:3; }
@@ -508,3 +514,24 @@ h3{ font-size:1.02rem; }
 /* ---- Computer strength stepper ---- */
 .strength-row{ display:grid; gap:6px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background: var(--surface-2); }
 .strength-row input[type="range"]{ height:26px; cursor:pointer; }
+
+/* ---- Brain skill rows — real, obviously clickable practice buttons ---- */
+.skill-row{
+  appearance:none; text-align:left; cursor:pointer; font: inherit; color: inherit;
+  display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap;
+  border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+  background: var(--surface-raised);
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.skill-row--due{ background: var(--warn-soft); border-color: var(--warn-line); }
+.skill-row:hover{ border-color: var(--brass-2); box-shadow: 0 6px 16px rgba(43,27,14,.10); transform: translateY(-1px); }
+.skill-row:active{ transform: translateY(0); }
+.skill-row__go{ font-size:.78rem; font-weight:800; color: var(--brass-3); }
+
+/* ---- Opponent setup: compact single row on wide screens, stacked on phones ---- */
+.opponent-setup{ display:grid; gap:10px; margin-top:10px; }
+@media (min-width:760px){
+  .opponent-setup{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
+  .opponent-setup .seg{ flex:0 0 auto; }
+  .opponent-setup .strength-row{ flex:1 1 300px; margin:0; }
+}
