@@ -1,0 +1,256 @@
+CHESSWORKERMIND — COMPLETE PROFESSIONAL UI AND DAILY LEARNING EXPERIENCE
+
+PROJECT: D:\chessworkermind web\app
+
+Implement this in the EXISTING working website/PWA. Edit its actual source. Do not create another app, deliver static mockups, or remove working features. Preserve chess rules, computer behaviour, verified coaching, hints, difficulty levels, languages, saved games, progress, accounts, subscriptions, and routes. Improve their visual presentation, wording, discoverability, and interaction design.
+
+PRODUCT EXPERIENCE
+
+Chessworkermind should feel like a carefully designed personal chess study room: welcoming to someone who has never played, useful to an experienced learner, and enjoyable to return to each day.
+
+A learner should always understand:
+- Where am I?
+- What am I doing now?
+- Whose turn is it?
+- What did the opponent actually do?
+- What should I notice?
+- What choices do I have?
+- Why might a move help?
+- What happened after I played?
+- What should I practise next?
+
+Do not display information simply because it exists in the data. Show it where and when it helps the learner make a decision. Give beginners a clear, short explanation first; let interested users reveal a deeper explanation. Every piece of coaching must remain tied to the actual position and existing verified facts.
+
+FIRST: INSPECT AND RECORD
+
+Read AGENTS.md, UI_PROGRESS.md if present, and relevant source files. Run the existing app. Inspect Home, guided Train, free Play, Why This Move, Why Not My Move, Games, game review, Brain, lesson journey, onboarding, settings, language selection, account, promotion, game-over, offline, and empty states.
+
+Inspect .design-reference/DESIGN_REFERENCE.png if it exists. Use its polish as inspiration for an ORIGINAL design. Do not copy its sample name, moves, scores, streaks, or statistics. If you cannot inspect the reference or running app, say exactly what was unavailable.
+
+Record the five most important existing visual or comprehension problems in UI_PROGRESS.md before changing source.
+
+DESIGN SYSTEM — ONE PRODUCT, NOT SEPARATE-LOOKING PAGES
+
+Art direction: a modern chess study room.
+
+- Main canvas: warm ivory.
+- Surfaces: soft parchment and cream.
+- Primary text and actions: deep espresso.
+- Accent: restrained antique brass.
+- Board: elegant, subtle wood tones with clearly different square values.
+- Important feedback: readable, distinct success, caution, and error treatments.
+- Headings: refined serif.
+- Explanations and controls: highly readable sans-serif.
+- Comfortable type sizes and line lengths; never make tiny labels carry the only important information.
+- Consistent spacing, alignment, button heights, card rules, icon style, borders, corner radii, and shadows.
+- Let spacing and typography establish hierarchy before adding decoration.
+
+Define reusable design tokens and components. Avoid random emoji, stock gradients, glowing controls, excessive glass effects, fake 3D, ornamental charts, too many cards, and faint text on cream.
+
+Use original or properly licensed visual assets. Document sources and licenses.
+
+CHESS PIECES — MAKE THEM EXCEPTIONAL
+
+Replace font-dependent glyphs with one cohesive, professional vector family for all 12 pieces: White and Black king, queen, rook, bishop, knight, and pawn.
+
+The silhouettes must be immediately familiar to beginners. Establish consistent scale, baseline, weight, outline, fill, and restrained depth. White and Black must remain distinct on both light and dark squares without relying on colour alone. Every piece must remain sharp and recognizable on a narrow phone.
+
+Use the SAME piece family on guided play, free play, game review, lesson diagrams, miniature boards, and promotion selection. Do not mix SVGs, Unicode chess glyphs, and emoji across board views.
+
+Visually inspect all 12 pieces:
+- On both square colours.
+- On phone, tablet, and PC.
+- With the board flipped.
+- While selected and dragged.
+- During movement and promotion.
+- In replay and small board views.
+
+Fix any piece that clips, blurs, jumps, covers a marker, or resembles another piece too closely.
+
+BOARD AND MOVE STATES
+
+Make the playable board the main visual element on Train and Play. Keep all squares perfectly square. Place readable coordinates in the frame, away from pieces.
+
+Define a clear priority when multiple highlights affect one square. Distinguish these states by shape, outline, marker, or pattern as well as colour:
+- Selected piece.
+- Legal empty destination.
+- Legal capture.
+- Opponent’s last move.
+- Suggested move origin.
+- Suggested move destination.
+- Verified threat.
+- Square the learner should inspect.
+- King in check.
+- Checkmate or game over.
+
+A checked king must be unmistakable. Never change the chess calculations behind check or checkmate. Never let a highlight cover the piece or make a square hard to tap. Explain the meaning of unfamiliar markers in a concise, accessible way.
+
+Preserve tap-to-move, drag-to-move, keyboard control, board flip, undo, promotion, replay, and screen-reader labels.
+
+INFORMATION RULES FOR EVERY SCREEN
+
+Every screen must have:
+1. A meaningful title.
+2. A brief explanation of its purpose when needed.
+3. A clearly visible current state.
+4. One dominant next action.
+5. Secondary actions placed where they are findable but not competing.
+6. Helpful loading, waiting, empty, offline, disabled, and error states.
+7. A clear outcome after the main action.
+
+Use real data only. Never add placeholder wins, a fake rating, sample streak, invented game, unverified tactical claim, or made-up progress simply to fill a design.
+
+Use plain language. When displaying notation such as Nf3, provide the learner-friendly piece-and-square meaning where helpful. Keep actual FEN, squares, move notation, evaluation, and continuation accurate. If the evidence does not support an explanation, show a modest, truthful message instead of an impressive-sounding claim.
+
+HOME — MAKE THE FIRST ACTION OBVIOUS
+
+Design an inviting opening with the brand, a short greeting, and a useful statement about today’s practice. Make one featured card the primary focus:
+- New learner: Start learning.
+- Returning learner with unfinished practice: Continue.
+- Review due: Show the relevant review as an appropriate next action.
+Use actual state to choose the action.
+
+Below that, present quieter paths to a guided game, a free game, a saved game, lessons, and genuine progress. A first-time learner should not see an intimidating wall of advanced features or empty numbers.
+
+Make the Home screen useful to return to daily without relying on pressure or fake urgency. Show what the user can achieve in a short session, using actual available lessons and game state. Streaks can be shown if real, but never shame someone for missing a day.
+
+TRAIN — THE SIGNATURE EXPERIENCE
+
+The board is the hero. Arrange information in the learner’s thinking order:
+
+Before the learner moves:
+- Whose turn it is.
+- What the opponent actually played.
+- What visibly changed on the board.
+- One verified thing worth noticing, when available.
+- One clear question about the current position.
+- A simple instruction for playing a move.
+
+Hints are optional and progressive:
+- First, where to look.
+- Then, an idea or piece to consider.
+- Then, a legal candidate move with a plain-language reason.
+- Finally, a deeper verified continuation when the user requests it.
+
+Connect each hint to the correct board squares. Do not reveal every hint at once. Let a user think and play independently. Do not automatically play their move.
+
+When the computer is thinking, show a calm waiting state. When analysis is unavailable, label rules-only coaching honestly. Never present stale analysis from an earlier position after move, undo, reset, or game change.
+
+Keep the coach close enough to the board to understand, but never let it cover squares or intercept taps.
+
+AFTER EACH LEARNER MOVE — A SMALL TEACHING MOMENT
+
+Present feedback in this order:
+1. What the learner played.
+2. What happened on the actual board.
+3. One important verified reason.
+4. A useful next question or action.
+
+Use an encouraging, precise tone. Do not praise every move generically. Do not call a reasonable move a blunder solely because the engine preferred another. Distinguish a proven tactical error from an alternative plan or uncertain evaluation.
+
+If an important mistake occurred, help the learner see it with an actual board relationship and a legal reply. Give Try Again, Replay, Keep My Move, or Continue only when those actions are genuinely available. Never trap the user in a mandatory explanation.
+
+WHY THIS MOVE / WHY NOT MY MOVE — LET THE BOARD TEACH
+
+Turn the existing verified explanation into a visual sequence. Show the relevant real position. Highlight the move, response, and important relationship at the appropriate step. Let the learner move forward or back through the explanation.
+
+Each step should answer one useful question:
+- What changed?
+- Why does it matter?
+- What could the opponent legally do?
+- What should I notice next time?
+
+Put deeper engine details behind an optional disclosure. Do not present a long wall of notation or an error log. Separate proven board facts, engine preference, and uncertainty.
+
+FREE PLAY AND COMPUTER MODE
+
+Make mode, human side, whose turn it is, difficulty, and coaching availability clear before and during a game. The computer must not appear to play both sides when the user expects to play. Visually distinguish “your turn,” “computer thinking,” and “game over.”
+
+Keep New Game, Undo, Flip, Hints, and Review findable. Make destructive actions understandable without making users navigate a crowded toolbar. Preserve current underlying game behaviour.
+
+GAMES — A USEFUL CHESS JOURNAL
+
+Show real saved games with clear status, date, side, move count, and the appropriate Resume or Review action. Put the most useful recent game first. Avoid technical metadata as the main title.
+
+In review, make the board position, move currently being examined, and replay controls easy to connect. Give a clear way back to the game list. If there are no saved games, provide a polished empty state with a Play action. Never show sample games as personal history.
+
+LESSONS AND DAILY RETURN
+
+Make lessons understandable before opening them: what skill they teach, approximate effort if known, and whether the learner can start now. Distinguish available, completed, and unavailable lessons honestly.
+
+A daily session should feel achievable. When existing real data supports it, lead users through a due review, one lesson linked to their own game, and a chance to try the same idea again. If those features are not implemented, do not draw controls that pretend they work.
+
+After finishing, show what the learner actually did and a sensible next option. Avoid punitive streak mechanics, artificial scarcity, or excessive notifications. Make returning enjoyable because the learner understands more each time.
+
+BRAIN — CLEAR LEARNING EVIDENCE
+
+Lead with “What should I practise next?” Show genuine skills in everyday language, with a simple explanation of the evidence behind them. Distinguish independent success from success after hints where the underlying data permits.
+
+Do not invent ratings, improvement percentages, charts, or confident mastery claims. If there is too little evidence, display a considered “Your journey is beginning” state and a relevant practice action. Show history or deeper statistics only when they help the learner understand progress.
+
+ONBOARDING, SETTINGS, LANGUAGE, ACCOUNT
+
+Onboarding should let a first-time user reach a playable board quickly. Explain mode, side, difficulty, hints, and language in plain words. Show selected choices clearly and allow later changes.
+
+Use the same design language for settings, account, and subscription status. Present price, billing state, and unavailable features truthfully. Do not visually imply that a subscription or feature is active if it is not.
+
+Respect the selected language throughout learner-facing UI. Check long translated strings and right-to-left layout. Keep board orientation controlled by player side, not text direction. Keep chess coordinates and legal moves accurate.
+
+NAVIGATION AND SCREEN SIZE
+
+Create one recognizable navigation system for Home, Train, Games, and Brain, with a clear active state and preserved destinations.
+
+Phone:
+- Fit the square board within available width.
+- Place turn, board, question, and primary action in a natural order.
+- Use comfortable touch targets.
+- No sideways scroll, covered squares, overlapping cards, clipped text, or inaccessible buttons.
+
+iPad:
+- Design deliberate portrait and landscape compositions.
+- Use available space for board and coach without stretching cards awkwardly.
+
+PC:
+- Create a balanced board-and-coach workspace.
+- Give move history a useful location.
+- Keep paragraphs readable and support keyboard and mouse.
+
+Check narrow OnePlus-sized phones, other mobile widths, tablets, desktop, orientation changes, safe areas, browser zoom, large text, and long translations.
+
+INTERACTION AND ACCESSIBILITY
+
+Polish hover, pressed, selected, disabled, loading, offline, empty, success, and error states. Make keyboard focus unmistakable. Support screen readers and meaningful labels. Respect reduced-motion settings. Use animation only to clarify a move or state change, never to delay gameplay.
+
+BUILD PROCESS — DO THE WORK
+
+1. Run and inspect the existing app. Record the five clearest visual or comprehension problems in UI_PROGRESS.md.
+2. Capture baseline screenshots at representative phone, iPad, and PC sizes if tooling allows.
+3. Define shared design tokens, pieces, icons, components, content hierarchy, and board-highlight priority.
+4. Redesign the pieces, board, and Train first.
+5. Apply the system to Home, after-move feedback, Why This Move, Play, Games, review, lessons, Brain, onboarding, settings, language, and account.
+6. Inspect the ACTUAL running UI at phone, iPad portrait and landscape, and PC sizes.
+7. Make a second polish pass for piece clarity, board markers, visual hierarchy, wording, spacing, contrast, and awkward transitions.
+8. Run the existing build and tests. Exercise board taps, drag, captures, check, promotion, flip, undo, hints, replay, saved games, language, settings, and navigation.
+9. Fix the problems discovered. Do not stop after a plan, a palette change, or static screenshots.
+
+FINAL QUALITY CHECK — EVERY SCREEN
+
+Ask and verify:
+- Can a new user understand this screen in a few seconds?
+- Is the next action obvious?
+- Does every displayed fact come from actual data?
+- Can the user see how the explanation relates to the board?
+- Are all 12 pieces instantly recognizable on either square colour?
+- Are all board markers visually distinct and accurate?
+- Is the text useful, readable, and free of unnecessary jargon?
+- Is the design coherent across phone, iPad, and PC?
+- Do all previous interactions still work?
+- Would this screen still feel pleasant after a long chess session?
+
+Improve any screen that fails. Do not call it complete merely because it looks better in one screenshot.
+
+CHECKPOINT AND DELIVERY
+
+Keep the source in the existing project. Update UI_PROGRESS.md with completed screens, actual tests, remaining defects, and the exact next step. If credits stop, resume from the saved files and checkpoint; do not start again.
+
+Deliver the working updated source, exact changed files, the five issues found and how they were resolved, build and test results actually obtained, a real preview command or URL, and screenshots of the RUNNING updated app when available. State any untested device or limitation honestly. Do not claim that visual perfection, deployment, or a working feature has been verified without checking it.

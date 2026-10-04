@@ -1,0 +1,45 @@
+{
+    "provider":  {
+                     "codecraft":  {
+                                       "models":  {
+                                                      "claude-opus-5.5":  {
+                                                                              "limit":  {
+                                                                                            "output":  16384,
+                                                                                            "context":  1000000
+                                                                                        },
+                                                                              "name":  "claude-opus-5.5"
+                                                                          }
+                                                  },
+                                       "name":  "CodeCraft API",
+                                       "options":  {
+                                                       "apiKey":  "{env:CODECRAFT_API_KEY}",
+                                                       "baseURL":  "https://codecraftapi.com/v1"
+                                                   },
+                                       "npm":  "@ai-sdk/openai-compatible"
+                                   }
+                 },
+    "share":  "disabled",
+    "model":  "codecraft/claude-opus-5.5",
+    "autoupdate":  false,
+    "permission":  {
+                       "doom_loop":  "deny",
+                       "external_directory":  "deny",
+                       "task":  "deny",
+                       "question":  "deny",
+                       "bash":  {
+                                    "firebase deploy*":  "deny",
+                                    "git push*":  "deny",
+                                    "npx vercel*":  "deny",
+                                    "rm -rf *":  "deny",
+                                    "rmdir /s*":  "deny",
+                                    "git clean*":  "deny",
+                                    "del /s*":  "deny",
+                                    "git reset --hard*":  "deny",
+                                    "vercel deploy*":  "deny",
+                                    "*":  "allow",
+                                    "npm publish*":  "deny",
+                                    "netlify deploy*":  "deny"
+                                }
+                   },
+    "$schema":  "https://opencode.ai/config.json"
+}

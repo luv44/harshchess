@@ -1,0 +1,22 @@
+{
+  "last_milestone": 5,
+  "last_verified_step": "Milestone 5 complete — PWA manifest (any+maskable SVG icons) + sw.js versioned cache (shell+icons+stockfish cache-first, HTML network-first) + registration on load, offline banner + sync/install UX, CSS QA (safe-area, logical layout, no horizontal scroll, reduced-motion), truthful feature matrix + Browser QA notes, PREVIEW.md/SETUP.md/FEATURE_MATRIX.md, source ZIP, build+tests green — next_milestone=6.",
+  "blocker": null,
+  "next_step": "Owner-only pending: real merchant account + webhook endpoint, tax/legal signoff, production deploy + physical iPhone Safari / Android Chrome smoke (touch near edges, Add to Home Screen, storage restore via sync), screenshots of running site. No further code work required before owner approval; checkout stays disabled, no ads in this release.",
+  "verified_commands": [
+    "npx tsc --noEmit — no errors",
+    "node --max-old-space-size=4096 ./node_modules/vitest/dist/cli.js run --reporter=verbose — 5 files, 77 tests passed (smoke 2 + milestone1 14 + engineWorker 15 + milestone3 26 + milestone4 20)",
+    "npm run build — tsc -b && vite build 58 modules, dist/index.html 0.75kB gzip 0.41kB, css 13.07kB gzip 3.36kB, js 365.32kB gzip 114.19kB, worker 1.99kB, built in 1.67s — dist includes manifest.webmanifest + sw.js + icons + stockfish",
+    "ZIP source: D:\\chessworkermind web\\chessworkermind-web-milestone5-source-20260927.zip (2535218 bytes, 2.5MB, excludes node_modules/dist)"
+  ],
+  "fixes_applied": [
+    "PWA: manifest.webmanifest + SVG icons (192/512 + maskable) + sw.js (CACHE cwm-v5-2026-09-27, shell preload, navigate network-first, assets cache-first, claim/skipWaiting, old purge)",
+    "index.html: links manifest + icon + apple-touch-icon; main.tsx registers /sw.js on load",
+    "CSS QA: overflow-x clip, safe-area insets on body/header/container/footer, logical layout board direction:ltr, comparison scroll container, min-width 0 guards, reduced-motion, no horizontal scroll at 360px",
+    "App: useOnline hook + offline banner, beforeinstallprompt capture + Install button, Sales/Status install cards with iPhone/Android/Desktop steps and Continue-in-browser fallback, Status→milestone 5 honest matrix + PWA/offline/export rows + Browser QA + install section, footer milestone 5",
+    "Docs: PREVIEW.md/SETUP.md/FEATURE_MATRIX.md with honest matrix and owner-pending list",
+    "Build: verified PWA assets copied to dist; source ZIP created excluding node_modules/dist"
+  ],
+  "zip": "D:\\chessworkermind web\\chessworkermind-web-milestone5-source-20260927.zip",
+  "updated_at": "2026-09-27T23:58:00Z"
+}
