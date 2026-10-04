@@ -156,3 +156,38 @@ reproduced live in headless Chromium and verified the same way.)
   "Practise hanging" opens `ex-hanging-1` scrolled into view, home hero board
   renders 64 squares / 32 pieces, no horizontal overflow at 390 px, and the
   computer opponent still replies in ~0.9 s — all with zero console errors.
+
+---
+
+# Fix report 3 — 2026-10-04 ("still not working" pass)
+
+Swept **every button on every tab** in headless Chromium with a fresh profile
+(Home 8, Learn 23, Brain, Games, plus every exercise-card control) and fixed
+the remaining dead clicks:
+
+- **"Practice due review" was a silent no-op on a fresh profile** (nothing is
+  due on day one, so the click did literally nothing). It now always opens a
+  practice — due skill first, otherwise the best fresh exercise — and the label
+  honestly reads "Practice a skill" / "Practice due review (N)".
+- **"Transfer test" was a silent no-op for most skills** (only "hanging" has a
+  second position in the pool). It now shows a clear "new position coming for
+  this skill" pill instead of a button that does nothing. Where a sibling
+  exists (hanging) it correctly switches exercises (verified ex-hanging-1 →
+  ex-transfer-1).
+- **Exercise board instruction** now says exactly what to do: "You play White —
+  tap one of your pieces, then a highlighted square." (Black pieces are
+  intentionally not movable in exercises — White is the side to move.)
+- The only remaining "no-change" clicks in the sweep are correct behaviour:
+  clicking the already-active Beginner level and the already-selected language.
+
+Also: the production preview (port 4173) had been stopped after testing — if
+that was the URL being tried, it now runs again alongside the dev preview.
+
+## Verified this pass
+
+- Full button sweep: no dead clicks remain on Home/Learn/Brain/Games.
+- Exercise card: Hint 1→3 (gold f3→e5 squares), Reset hints, Reset position
+  (clears verdict + restores FEN), Transfer test, Dismiss, Close — all produce
+  their expected visible change; Scholar's-mate exercise gives
+  "✓ Correct! Qxf7# was the best move in this position."
+- 131/131 unit tests, tsc clean, production build clean, zero page errors.

@@ -357,13 +357,22 @@ export function LearnPage({
               })}
             </div>
             <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 8 }}>Due now: {dueReviews.length} · Reviews done today: {dailyProgress.reviewsDone}</p>
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => {
-              const now = new Date().toISOString();
-              const due = reviews.filter((r) => isDue(r, now));
-              if (due.length === 0) return;
-              startExercise(EXERCISES.find((e) => e.motif === due[0].skillId)?.id ?? EXERCISES[0].id);
-              setDailyProgress((p) => ({ ...p, reviewsDone: p.reviewsDone + 1 }));
-            }}>Practice due review</button>
+            <button
+              className="btn"
+              style={{ marginTop: 8 }}
+              title={dueReviews.length === 0 ? "Nothing is due yet — this opens a fresh practice instead" : `Due now: ${dueReviews.map((r) => r.skillId).join(", ")}`}
+              onClick={() => {
+                const now = new Date().toISOString();
+                const due = reviews.filter((r) => isDue(r, now));
+                // Nothing due yet must never be a silent dead click — open the
+                // best fresh practice instead so the button always does something.
+                const target = due.length > 0
+                  ? EXERCISES.find((e) => e.motif === (MOTIF_FOR_SKILL[due[0].skillId] ?? due[0].skillId)) ?? EXERCISES[0]
+                  : ranked[0]?.ex ?? EXERCISES[0];
+                startExercise(target.id);
+                setDailyProgress((p) => ({ ...p, reviewsDone: p.reviewsDone + 1 }));
+              }}
+            >{dueReviews.length > 0 ? `Practice due review (${dueReviews.length})` : "Practice a skill"}</button>
           </div>
         </div>
 
@@ -475,11 +484,14 @@ export function LearnPage({
                 </details>
                 <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Opponent threat: {lastPacketInfo.packet.opponentThreat ? `${lastPacketInfo.packet.opponentThreat.san} (${lastPacketInfo.packet.opponentThreat.uci})` : "—"} · Ask “What were you considering?” is optional self-report only; evidence comes from your next unaided attempt.</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="btn" onClick={() => {
-                    // transfer test — different position same motif
+                  {(() => {
                     const transfer = EXERCISES.find((e) => e.motif === exercise.motif && e.id !== exercise.id);
-                    if (transfer) startExercise(transfer.id);
-                  }}>Transfer test — same idea, new position</button>
+                    return transfer ? (
+                      <button className="btn" onClick={() => startExercise(transfer.id)}>Transfer test — same idea, new position</button>
+                    ) : (
+                      <span className="pill pill--off" title="A second position for this skill is not in the pool yet">Transfer test — new position coming for this skill</span>
+                    );
+                  })()}
                   <button className="btn btn--ghost" onClick={() => setLastPacketInfo(null)}>Dismiss</button>
                 </div>
               </div>
@@ -519,5 +531,17 @@ function ExerciseBoard({ fen, onMove, suggestFrom, suggestTo }: { fen: string; o
     return last ? { from: last.from, to: last.to } : null;
   }, [c]);
 
-  return <ChessBoard fen={fen} orientation="w" lastMove={lastMove} getLegalTargets={getLegalTargets} isPromotionMove={isPromotionMove} tryMove={onMove} suggestFrom={suggestFrom ?? null} suggestTo={suggestTo ?? null} />;
+  return (
+    <ChessBoard
+      fen={fen}
+      orientation="w"
+      lastMove={lastMove}
+      getLegalTargets={getLegalTargets}
+      isPromotionMove={isPromotionMove}
+      tryMove={onMove}
+      suggestFrom={suggestFrom ?? null}
+      suggestTo={suggestTo ?? null}
+      hintText="You play White — tap one of your pieces, then a highlighted square. Black cannot be moved in an exercise."
+    />
+  );
 }
