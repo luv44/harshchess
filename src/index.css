@@ -640,3 +640,8 @@ h3{ font-size:1.02rem; }
   border-radius: 10px; padding: 8px 10px; margin-top: 8px;
   font-size: .9rem; text-align: left;
 }
+
+/* ----- Tricks (real-game traps) ----- */
+.review-moves__key { border-color: #B99450; background: var(--brass-soft, #F0E4CC); }
+.review-moves__san--locked { opacity: .45; cursor: not-allowed; }
+.puzzle-card--done { border-color: #BFE3C2; background: #F3FAF3; }

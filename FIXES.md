@@ -384,3 +384,51 @@ puzzles every visit. It is now an **adaptive engine**.
 | Zero console errors, zero layout overflow | ✅ |
 
 Footer must now read **App build 2026.10.04-7** (one hard refresh: Ctrl+Shift+R).
+
+---
+
+## Report 9 — Tricks from real games, played like the Games tab (App build 2026.10.04-8)
+
+You asked: based on Learn and Brain, give tricks — "what to do when this happens" in a real game
+of around 15 moves — with all the features like the Games tab. Done.
+
+### The new "Tricks from real games" section (Learn tab)
+**6 famous traps** (7–18 moves each), machine-verified legal and sound by 19 automated tests:
+Légal's Mate · The Elephant Trap · Blackburne Shilling Gambit · The Fried Liver · The Petrov
+Trap (discovered check wins the queen) · Scholar's Mate.
+
+For every trick you get **exactly the Games-tab experience plus interaction**:
+- **Watch it unfold ▶** — auto-plays the real game move by move (or step yourself: ◀ Prev /
+  Next ▶ / Latest, or **tap any move** in the full clickable move list — current move highlighted)
+- At the **★ key moment** (marked in the list) the board hands control to **you** — the board even
+  flips so you sit on the trickster's side. Find the trick move; wrong moves get a nudge,
+  2-step hints walk you there, or "Show me the move" plays it for you (recorded honestly as
+  "with help")
+- **The punishment** — step to the end and see the mate / the won queen
+- **What just happened** — the idea in plain words
+- **If it happens to YOU** — how to defend, so you never fall for it
+- Progress saved: ✓ on learned tricks, "Replay trick" to revisit
+
+### Brain integration
+New **Game tricks** card: progress bar ("2 of 6 tricks learned") + **Learn the next trick →**
+deep-link that opens the exact trick. Trick results feed your skill bars and recent activity
+like every other practice.
+
+### Verified in a real browser (phone width 390px, real taps)
+| Check | Result |
+|---|---|
+| 6 trick cards, ★ key move marked in the move list | ✅ |
+| Autoplay stops at the key moment → "★ The trick — your move" | ✅ |
+| Wrong move → nudge + hint steps unlock | ✅ |
+| Légal: Nxe5 found → "Trick found!" → mate status at the end | ✅ |
+| Elephant (you play Black): board flips, Nxd5 found → knight won | ✅ |
+| End-of-line: result + "What just happened" + "If it happens to YOU" | ✅ |
+| Learned trick ✓ persisted; Brain "1 of 6 tricks learned" + deep-link | ✅ |
+| Lessons + smart practice regression (9 checks) | ✅ |
+| 211/211 unit tests (19 prove every trick line) | ✅ |
+| Zero console errors, zero overflow | ✅ |
+
+Note: this session's sandbox was restored mid-round (dev tooling vanished); everything was
+re-fetched from your GitHub branch — no work was lost.
+
+Footer must now read **App build 2026.10.04-8** (one hard refresh: Ctrl+Shift+R).

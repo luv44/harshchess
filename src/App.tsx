@@ -13,6 +13,7 @@ import { Icon, Paths } from "./icons";
 import { loadReviews, loadLearner } from "./coach/learnerStorage";
 import { LESSONS, loadLessonDone, isLessonDone, nextLesson } from "./coach/lessons";
 import { loadPractice, getLevel } from "./coach/adaptive";
+import { TRICKS, loadTrickDone } from "./coach/tricks";
 import { MOTIF_LABEL, type Motif } from "./coach/practiceBank";
 import { isDue as isReviewDue } from "./coach/spaced";
 import { loadSession } from "./chess/session";
@@ -48,8 +49,8 @@ function useHomeAction(): { label: string; to: Tab; detail: string } {
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
   /** Deep-link into a Learn lesson/practice, e.g. from Brain's "Practise hanging". */
-  const [learnRequest, setLearnRequest] = useState<{ lessonId?: string; skillId?: string; motif?: string } | null>(null);
-  const startPractice = useCallback((req: { lessonId?: string; skillId?: string; motif?: string }) => {
+  const [learnRequest, setLearnRequest] = useState<{ lessonId?: string; skillId?: string; motif?: string; trickId?: string } | null>(null);
+  const startPractice = useCallback((req: { lessonId?: string; skillId?: string; motif?: string; trickId?: string }) => {
     setLearnRequest(req);
     setTab("learn");
   }, []);
@@ -140,7 +141,7 @@ export default function App() {
             <span style={{ marginLeft: 6 }}>No ads — AdSense optional future phase only.</span>
           </p>
           <p style={{ marginTop: 8, fontSize: ".78rem", opacity: .7 }}>PWA: manifest + icons + sw.js · offline shell cached; login/purchase/sync need network · Safari iPhone: Share → Add to Home Screen</p>
-          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-7</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
+          <p style={{ marginTop: 6, fontSize: ".74rem", opacity: .8 }}>App build <b>2026.10.04-8</b> — if this number is missing on your screen, refresh once (Ctrl+Shift+R) to get the latest version.</p>
         </div>
       </footer>
     </>
@@ -804,8 +805,11 @@ const FRIENDLY: Record<string, string> = {
   endgame: "Endgames",
 };
 
-function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (req: { lessonId?: string; skillId?: string; motif?: string }) => void }) {
+function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (req: { lessonId?: string; skillId?: string; motif?: string; trickId?: string }) => void }) {
   const practice = loadPractice();
+  const trickDoneList = loadTrickDone();
+  const tricksDone = TRICKS.filter((t) => trickDoneList.some((d) => d.id === t.id)).length;
+  const nextTrickId = (TRICKS.find((t) => !trickDoneList.some((d) => d.id === t.id)) ?? TRICKS[0]).id;
   const reviews = (() => { try { return loadReviews(); } catch { return []; } })();
   const done = loadLessonDone();
   const learner = loadLearner();
@@ -881,6 +885,26 @@ function BrainPage({ onGo, onPractise }: { onGo: (t: Tab) => void; onPractise: (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
           <button className="btn btn--quiet btn--sm" onClick={() => onPractise({ lessonId: upNext.id })}>{courseComplete ? "Revisit course" : "Continue course"}</button>
           <button className="btn btn--ghost btn--sm" onClick={() => onGo("learn")}>Browse all lessons</button>
+        </div>
+      </div>
+
+      {/* Game tricks */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <h3>Game tricks</h3>
+        <p style={{ color: "var(--muted)", fontSize: ".86rem", marginTop: 4 }}>
+          Real 15-move traps: watch them unfold, find the key move yourself, and learn the defence.
+        </p>
+        <div className="course-progress" style={{ marginTop: 10 }}>
+          <div className="course-progress__bar">
+            <div className="course-progress__fill" style={{ width: `${(tricksDone / TRICKS.length) * 100}%` }} />
+          </div>
+          <span className="course-progress__label"><b>{tricksDone}</b> of {TRICKS.length} tricks learned</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <button className="btn btn--primary btn--sm" onClick={() => onPractise({ trickId: nextTrickId })}>
+            {tricksDone === 0 ? "Learn your first trick →" : tricksDone < TRICKS.length ? "Learn the next trick →" : "Replay a trick →"}
+          </button>
+          <button className="btn btn--ghost btn--sm" onClick={() => onGo("learn")}>All tricks</button>
         </div>
       </div>
 

@@ -5,6 +5,8 @@ import { recordAttempt, type SkillId, type Learner } from "./learnerModel";
 import { loadLearner, saveLearner, loadReviews, saveReviews } from "./learnerStorage";
 import { isDue, scheduleAfterAttempt, createReviewItem, type ReviewItem } from "./spaced";
 import PracticeSession from "./PracticeSession";
+import TrickPlayer from "./TrickPlayer";
+import { TRICKS, loadTrickDone, saveTrickDone, isTrickDone, type Trick } from "./tricks";
 import { PRACTICE_BANK, MOTIF_LABEL, type Motif } from "./practiceBank";
 import { loadPractice, getLevel } from "./adaptive";
 import { LanguagePicker } from "../i18n/LanguagePicker";
@@ -75,7 +77,7 @@ export function LearnPage({
 }: {
   tag: string;
   setTag: (t: string) => void;
-  startRequest?: { lessonId?: string; skillId?: string; motif?: string } | null;
+  startRequest?: { lessonId?: string; skillId?: string; motif?: string; trickId?: string } | null;
   onStartRequestConsumed?: () => void;
 }) {
   const [learner, setLearner] = useState<Learner>(() => loadLearner());
@@ -91,6 +93,8 @@ export function LearnPage({
 
   const [sessionMotif, setSessionMotif] = useState<Motif | "mixed" | null>(null);
   const [practiceStore, setPracticeStore] = useState(() => loadPractice());
+  const [trickId, setTrickId] = useState<string | null>(null);
+  const [trickDone, setTrickDone] = useState(() => loadTrickDone());
 
   const playerRef = useRef<HTMLDivElement | null>(null);
 
@@ -115,19 +119,29 @@ export function LearnPage({
     setLessonFeedback(null);
     setLessonHint(false);
     setSessionMotif(null);
+    setTrickId(null);
     scrollToPlayer();
   }, [scrollToPlayer]);
 
   const openSession = useCallback((m: Motif | "mixed") => {
     setSessionMotif(m);
     setLessonId(null);
+    setTrickId(null);
+    scrollToPlayer();
+  }, [scrollToPlayer]);
+
+  const openTrick = useCallback((id: string) => {
+    setTrickId(id);
+    setLessonId(null);
+    setSessionMotif(null);
     scrollToPlayer();
   }, [scrollToPlayer]);
 
   /** Brain / Home deep-links: open the matching lesson or puzzle directly. */
   useEffect(() => {
     if (!startRequest) return;
-    if (startRequest.lessonId) openLesson(startRequest.lessonId);
+    if (startRequest.trickId) openTrick(startRequest.trickId);
+    else if (startRequest.lessonId) openLesson(startRequest.lessonId);
     else if (startRequest.skillId || startRequest.motif) {
       const motif = startRequest.motif ?? MOTIF_FOR_SKILL[startRequest.skillId ?? ""] ?? "hanging";
       openSession((motif === "mixed" ? "mixed" : motif) as Motif | "mixed");
@@ -353,6 +367,28 @@ export function LearnPage({
         </div>
       )}
 
+      {/* Trick player — a real-game trick like the Games tab */}
+      {(() => {
+        const trick = TRICKS.find((t) => t.id === trickId);
+        if (!trick) return null;
+        const nextT = TRICKS[TRICKS.findIndex((t) => t.id === trick.id) + 1];
+        return (
+          <TrickPlayer
+            key={trick.id}
+            trick={trick}
+            solvedAlready={isTrickDone(trickDone, trick.id)}
+            onSolved={(hinted) => {
+              const entry = { id: trick.id, completedAt: new Date().toISOString() };
+              setTrickDone((prev) => (prev.some((d) => d.id === trick.id) ? prev : [...prev, entry]));
+              saveTrickDone([...loadTrickDone().filter((d) => d.id !== trick.id), entry]);
+              void hinted;
+            }}
+            onExit={() => setTrickId(null)}
+            onNextTrick={() => openTrick((nextT ?? TRICKS[0]).id)}
+          />
+        );
+      })()}
+
       {/* Adaptive practice session */}
       {sessionMotif && (
         <PracticeSession
@@ -383,6 +419,27 @@ export function LearnPage({
                 <strong>{MOTIF_LABEL[m]}</strong>
                 <span className="puzzle-card__meta">Level {lv} of 3 · {n} positions</span>
                 <span className="puzzle-card__go">Practise →</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tricks from real games */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Tricks from real games — what to do when it happens</h3>
+        <p style={{ color: "var(--muted)", fontSize: "0.86rem", marginTop: 4 }}>
+          Real opening lines of 7–18 moves. Watch it unfold like the Games tab, then <b>you</b> find the key move.
+          Every line is machine-verified legal and sound — plus how to defend if someone tries it on you.
+        </p>
+        <div className="puzzle-grid">
+          {TRICKS.map((t: Trick) => {
+            const isDone = isTrickDone(trickDone, t.id);
+            return (
+              <button key={t.id} type="button" className={`puzzle-card${isDone ? " puzzle-card--done" : ""}`} onClick={() => openTrick(t.id)}>
+                <strong>{isDone ? "✓ " : ""}{t.title}</strong>
+                <span className="puzzle-card__meta">{t.opening} · move {Math.floor(t.keyPly / 2) + 1} · you play {t.side === "w" ? "White" : "Black"}</span>
+                <span className="puzzle-card__go">{isDone ? "Replay trick →" : "Learn this trick →"}</span>
               </button>
             );
           })}
